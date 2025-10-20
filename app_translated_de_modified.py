@@ -7,12 +7,12 @@ import plotly.graph_objects as go
 # SEITENKONFIGURATION - MUSS DER ERSTE STREAMLIT-BEFEHL SEIN
 st.set_page_config(
     page_title="ADC Ressourcenplanner",
-    page_icon="🚀",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# BENUTZERDEFINIERTES CSS MIT TÜRKISBLAUEM KRITISCHEM THEMA
+# THEMA
 st.markdown("""
 <style>
     .main-header {
@@ -82,16 +82,16 @@ st.markdown("""
 # Initialisiere Session-State für Datenpersistenz
 if 'team_data' not in st.session_state:
     st.session_state.team_data = [
-        {"name": "Alice Schmidt", "role": "Senior Backend Developer", "components": "Payment API, Database", 
-         "start_date": "2020-01-01", "planned_exit": "2024-12-31", "knowledge_transfer_status": "Not Started", "priority": "High"},
-        {"name": "Bob Weber", "role": "Frontend Developer", "components": "User Interface, React Components", 
-         "start_date": "2021-03-15", "planned_exit": "2024-06-30", "knowledge_transfer_status": "In Progress", "priority": "Critical"},
-        {"name": "Charlie Mueller", "role": "System Architect", "components": "System Design, Cloud Infrastructure", 
-         "start_date": "2019-06-01", "planned_exit": "2025-03-01", "knowledge_transfer_status": "Completed", "priority": "Medium"},
-        {"name": "Diana Fischer", "role": "QA Engineer", "components": "Testing Framework, Automation", 
-         "start_date": "2022-01-10", "planned_exit": "2024-09-15", "knowledge_transfer_status": "Not Started", "priority": "High"},
-        {"name": "Erik Wagner", "role": "DevOps Engineer", "components": "CI/CD Pipeline, Kubernetes", 
-         "start_date": "2021-08-20", "planned_exit": "2024-11-30", "knowledge_transfer_status": "In Progress", "priority": "Medium"}
+        {"name": "Alice Schmidt", "role": "Developer", "components": "DOKU", 
+         "start_date": "2020-01-01", "planned_exit": "2026-12-31", "knowledge_transfer_status": "Not Started", "priority": "High"},
+        {"name": "Bob Weber", "role": "Tester", "components": "Generell", 
+         "start_date": "2021-03-15", "planned_exit": "2029-06-30", "knowledge_transfer_status": "In Progress", "priority": "Critical"},
+        {"name": "Charlie Mueller", "role": "System Architect", "components": "iBS", 
+         "start_date": "2019-06-01", "planned_exit": "2025-12-30", "knowledge_transfer_status": "Completed", "priority": "Medium"},
+        {"name": "Diana Fischer", "role": "Requirements Engineer", "components": "TMS", 
+         "start_date": "2022-01-10", "planned_exit": "2031-09-15", "knowledge_transfer_status": "Not Started", "priority": "High"},
+        {"name": "Erik Wagner", "role": "Scrum Master", "components": "Kundenprojekte", 
+         "start_date": "2021-08-20", "planned_exit": "2035-11-30", "knowledge_transfer_status": "In Progress", "priority": "Medium"}
     ]
 
 if 'editing_index' not in st.session_state:
@@ -99,8 +99,14 @@ if 'editing_index' not in st.session_state:
 
 def main():
     # KOPFZEILE
-    st.markdown('<h1 class="main-header">🏢 ADC TMS Ressourcenplanner</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🏢 ADC TMS Ressourcenplanner📈📅</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666;">Besser als Talevo auf jeden Fall</p>', unsafe_allow_html=True)
+
+    
+    # Initialize component map
+    if 'component_map' not in st.session_state:
+        st.session_state.component_map = {}
+
     
     # Convert to DataFrame
     df = pd.DataFrame(st.session_state.team_data)
@@ -169,14 +175,22 @@ def main():
         if not critical_cases.empty:
             for _, person in critical_cases.iterrows():
                 # Turquoise blue color coding based on urgency
+                
                 if person['days_until_exit'] < 90:
-                    urgency_color = "#006064"  # Dark turquoise
-                    urgency_bg = "#00bcd4"     # Bright turquoise
+                    urgency_color = "#FF4D4F"  # Red
+                    urgency_bg = "#FF4D4F"
                     urgency_text = "EXTREMELY URGENT"
                 elif person['days_until_exit'] < 180:
-                    urgency_color = "#00838f"  # Medium turquoise
-                    urgency_bg = "#4dd0e1"     # Light turquoise
+                    urgency_color = "#FFA500"  # Orange
+                    urgency_bg = "#FFA500"
                     urgency_text = "URGENT"
+                elif person['days_until_exit'] < 365:
+                    urgency_color = "#FFD700"  # Gold
+                    urgency_bg = "#FFD700"
+                    urgency_text = "Monitor"
+                else:
+                    urgency_color = "#52C41A"  # Green
+
                 
                 st.markdown(f"""
                 <div class="critical-alert">
@@ -191,7 +205,7 @@ def main():
                             {person['days_until_exit']} days
                         </div>
                     </div>
-                    <p style="margin:0.5rem 0 0 0; font-style: italic;">💡 Empfohlene Maßnahme: Einstellungsprozess sofort starten</p>
+                    <p style="margin:0.5rem 0 0 0; font-style: italic;">💡 Empfohlene Maßnahme: Ressourcenaufbau bald starten</p>
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -199,6 +213,35 @@ def main():
     else:
         st.info("ℹ️ Keine Teamdaten verfügbar. Fügen Sie Teammitglieder hinzu, um kritische Warnungen zu sehen.")
     
+    # COMPONENT-SPECIFIC CRITICAL ALERTS (Color-coded)
+    if 'component_map' in st.session_state and st.session_state.component_map:
+        component_alerts = []
+        for component, person in st.session_state.component_map.items():
+            match = df[df['name'] == person]
+            if not match.empty:
+                days = int(match.iloc[0]['days_until_exit'])
+                urgency = "EXTREM" if days < 90 else "Dringend" if days < 180 else "OK"
+                component_alerts.append({
+                    "Komponente": component,
+                    "Verantwortlich": person,
+                    "Tage bis Austritt": days,
+                    "Dringlichkeit": urgency
+                })
+
+        alert_df = pd.DataFrame(component_alerts)
+
+        urgency_colors = {
+            "EXTREM": "background-color: #ff4d4f; color: white; font-weight: bold",
+            "Dringend": "background-color: #fa8c16; color: white; font-weight: bold",
+            "OK": "background-color: #52c41a; color: white; font-weight: bold"
+        }
+
+        styled_alert_df = alert_df.style.applymap(lambda val: urgency_colors.get(val, ""), subset=["Dringlichkeit"])
+        st.markdown("#### 🧩 Komponenten mit kritischem Risiko")
+        st.dataframe(styled_alert_df, use_container_width=True)
+    else:
+        st.info("ℹ️ Keine Komponenten zugewiesen.")
+
     # EDIT/DELETE INTERFACE
     st.markdown("---")
     st.markdown('<h3 class="section-header">✏️ Teammitglieder verwalten</h3>', unsafe_allow_html=True)
@@ -211,6 +254,11 @@ def main():
                 
                 with col1:
                     st.write(f"**Components:** {member['components']}")
+                    
+                    assigned_components = [comp for comp, person in st.session_state.component_map.items() if person == member['name']]
+                    if assigned_components:
+                        st.write(f"**Zugewiesene Komponenten:** {', '.join(assigned_components)}")
+
                     st.write(f"**Startdatum:** {member['start_date']}")
                     st.write(f"**Planned Exit:** {member['planned_exit']}")
                     st.write(f"**Wissensübergabe:** {member['knowledge_transfer_status']}")
@@ -288,8 +336,8 @@ def main():
                                      color="priority", 
                                      title="Zeitplan der Teammitglieder (Farbe nach Priorität)",
                                      color_discrete_map={
-                                         "Critical": "#00bcd4",
-                                         "High": "#009999", 
+                                         "Critical": "#d40000",
+                                         "High": "#ED8727", 
                                          "Medium": "#4dd0e1",
                                          "Low": "#52C41A"
                                      })
@@ -311,7 +359,7 @@ def main():
                               hole=0.4,
                               color=status_counts.index,
                               color_discrete_map={
-                                  "Not Started": "#00bcd4",
+                                  "Not Started": "#d40000",
                                   "In Progress": "#4dd0e1", 
                                   "Completed": "#52C41A"
                               })
@@ -323,6 +371,51 @@ def main():
             )
             st.plotly_chart(fig_donut, use_container_width=True)
     
+    # Prognose: Forecast for next 12 months
+    forecast_months = pd.date_range(pd.Timestamp.today().normalize(), periods=12, freq='MS')
+    forecast_df = pd.DataFrame({'Monat': forecast_months})
+
+    forecast_df['Aktive Mitglieder'] = forecast_df['Monat'].apply(
+        lambda m: ((df['start_date'] <= m) & ((df['planned_exit'].isna()) | (df['planned_exit'] > m))).sum()
+    )
+    forecast_df['Geplante Austritte'] = forecast_df['Monat'].apply(
+        lambda m: (df['planned_exit'].dt.to_period('M') == m.to_period('M')).sum()
+    )
+
+    fig_forecast = px.line(
+        forecast_df,
+        x='Monat',
+        y=['Aktive Mitglieder', 'Geplante Austritte'],
+        labels={'value': 'Anzahl', 'Monat': 'Monat', 'variable': 'Metrik'},
+        title='Teamprognose: Aktive Mitglieder und Austritte pro Monat'
+    )
+
+    st.markdown("---")
+    st.markdown("#### 📈 Teamprognose")
+    st.plotly_chart(fig_forecast, use_container_width=True)
+
+    # Kritische Alerts Tabelle
+    critical_df = df[df['days_until_exit'] < 180][['name', 'role', 'components', 'days_until_exit', 'priority']]
+    critical_df = critical_df.sort_values('days_until_exit')
+
+    st.markdown("#### 🚨 Kritische Austritte (< 180 Tage)")
+    if not critical_df.empty:
+        st.dataframe(critical_df, use_container_width=True)
+    else:
+        st.success("✅ Keine kritischen Austritte in den nächsten 6 Monaten.")
+
+    # DISPLAY COMPONENT RESPONSIBILITIES TABLE
+    if 'component_map' in st.session_state and st.session_state.component_map:
+        st.markdown("---")
+        st.markdown("#### 🧪 Komponentenübersicht")
+        component_df = pd.DataFrame(
+            list(st.session_state.component_map.items()),
+            columns=["Komponente", "Verantwortlich"]
+        )
+        st.dataframe(component_df, use_container_width=True)
+    else:
+        st.info("ℹ️ Noch keine Komponenten hinzugefügt.")
+
     # DATA TABLE WITH FILTERS
     if not df.empty:
         st.markdown("---")
@@ -410,7 +503,24 @@ def main():
                 st.rerun()
             else:
                 st.sidebar.error("Please fill at least Name and Rolle")
-    
+    # COMPONENT ASSIGNMENT FORM IN SIDEBAR
+    if 'component_map' not in st.session_state:
+        st.session_state.component_map = {}
+
+    st.sidebar.markdown('#### 🧪 Neue Komponente hinzufügen')
+    with st.sidebar.form("add_component_form", clear_on_submit=True):
+        component_name = st.text_input("Komponentenname")
+        responsible_person = st.selectbox("Verantwortliche Person", options=[member['name']
+    for member in st.session_state.team_data])
+        component_submitted = st.form_submit_button("💾 Komponente speichern", use_container_width=True)
+
+        if component_submitted:
+            if component_name and responsible_person:
+                st.session_state.component_map[component_name] = responsible_person
+                st.sidebar.success(f"✅ '{component_name}' wurde {responsible_person} zugewiesen.")
+            else:
+                st.sidebar.error("Bitte geben Sie einen Namen und wählen Sie eine verantwortliche Person aus.")
+
     # SIDEBAR ACTIONS
     st.sidebar.markdown("---")
     st.sidebar.markdown('<h3 style="color: #009999;">🛠️ Aktionen</h3>', unsafe_allow_html=True)
