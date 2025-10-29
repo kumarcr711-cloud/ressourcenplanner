@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
+import numpy as np
 
 # SEITENKONFIGURATION - MUSS DER ERSTE STREAMLIT-BEFEHL SEIN
 st.set_page_config(
@@ -20,7 +21,7 @@ st.markdown("""
         color: #009999 !important;
         text-align: center;
         margin-bottom: 2rem;
-        font-weight: 700;
+        font-weight: 700; 
     }
     .metric-card {
         background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
@@ -83,15 +84,20 @@ st.markdown("""
 if 'team_data' not in st.session_state:
     st.session_state.team_data = [
         {"name": "Alice Schmidt", "role": "Developer", "components": "DOKU", 
-         "start_date": "2020-01-01", "planned_exit": "2026-12-31", "knowledge_transfer_status": "Not Started", "priority": "High"},
+         "start_date": "2020-01-01", "planned_exit": "2026-12-31", "knowledge_transfer_status": "Not Started", "priority": "High", "age": 32},
         {"name": "Bob Weber", "role": "Tester", "components": "Generell", 
-         "start_date": "2021-03-15", "planned_exit": "2029-06-30", "knowledge_transfer_status": "In Progress", "priority": "Critical"},
+         "start_date": "2021-03-15", "planned_exit": "2029-06-30", "knowledge_transfer_status": "In Progress", "priority": "Critical", "age": 50},
         {"name": "Charlie Mueller", "role": "System Architect", "components": "iBS", 
-         "start_date": "2019-06-01", "planned_exit": "2025-12-30", "knowledge_transfer_status": "Completed", "priority": "Medium"},
+         "start_date": "2019-06-01", "planned_exit": "2025-12-30", "knowledge_transfer_status": "Completed", "priority": "Medium", "age": 52},
         {"name": "Diana Fischer", "role": "Requirements Engineer", "components": "TMS", 
-         "start_date": "2022-01-10", "planned_exit": "2031-09-15", "knowledge_transfer_status": "Not Started", "priority": "High"},
+         "start_date": "2022-01-10", "planned_exit": "2031-09-15", "knowledge_transfer_status": "Not Started", "priority": "High", "age": 57},
         {"name": "Erik Wagner", "role": "Scrum Master", "components": "Kundenprojekte", 
-         "start_date": "2021-08-20", "planned_exit": "2035-11-30", "knowledge_transfer_status": "In Progress", "priority": "Medium"}
+         "start_date": "2021-08-20", "planned_exit": "2035-11-30", "knowledge_transfer_status": "In Progress", "priority": "Medium", "age": 29},
+        {"name": "Markus Becker", "role": "DevOps Engineer", "components": "Backend, Cloud", "start_date": "2023-02-11", "planned_exit": "2028-12-15", "knowledge_transfer_status": "Not Started", "priority": "Medium", "age": 29},
+        {"name": "Sophie Krause", "role": "Business Analyst", "components": "Finanzen, Generell", "start_date": "2018-08-30", "planned_exit": "2027-03-12", "knowledge_transfer_status": "Completed", "priority": "High", "age": 41},
+        {"name": "Julia Wagner", "role": "UI/UX Designer", "components": "Frontend, TMS", "start_date": "2021-05-18", "planned_exit": "2026-08-29", "knowledge_transfer_status": "In Progress", "priority": "Critical", "age": 36},
+        {"name": "Lars Richter", "role": "Test Automation", "components": "Testing, iBS", "start_date": "2019-11-04", "planned_exit": "2025-11-04", "knowledge_transfer_status": "Not Started", "priority": "Medium", "age": 45},
+        {"name": "Heike Zimmermann", "role": "Product Owner", "components": "Kommunikation, Kundenprojekte", "start_date": "2017-03-14", "planned_exit": "2026-09-01", "knowledge_transfer_status": "Completed", "priority": "High", "age": 53} 
     ]
 
 if 'editing_index' not in st.session_state:
@@ -106,6 +112,9 @@ def main():
     # Initialize component map
     if 'component_map' not in st.session_state:
         st.session_state.component_map = {}
+    # Anzahl benötigter Personen pro Komponente
+    if 'component_requirements' not in st.session_state:
+        st.session_state.component_requirements = {}
 
     
     # Convert to DataFrame
@@ -215,30 +224,71 @@ def main():
     
     # COMPONENT-SPECIFIC CRITICAL ALERTS (Color-coded)
     if 'component_map' in st.session_state and st.session_state.component_map:
-        component_alerts = []
-        for component, person in st.session_state.component_map.items():
-            match = df[df['name'] == person]
-            if not match.empty:
-                days = int(match.iloc[0]['days_until_exit'])
-                urgency = "EXTREM" if days < 90 else "Dringend" if days < 180 else "OK"
-                component_alerts.append({
-                    "Komponente": component,
-                    "Verantwortlich": person,
-                    "Tage bis Austritt": days,
-                    "Dringlichkeit": urgency
-                })
+        # Build component status table with required staffing vs active resources
+        component_rows = []
+        today = pd.Timestamp.today().normalize()
+        for component, responsible in st.session_state.component_map.items():
+            # Robust active count:
+            # - Count rows where member.components contains the component OR member.name is in responsible list
+            # normalize responsible to a list
+            responsible_list = responsible if isinstance(responsible, (list, tuple)) else [responsible]
+            # - Member is active when start_date <= today AND (planned_exit is NaT or planned_exit > today)
+            comp_key = component.strip().lower()
+            active_count = 0
+            for _, row in df.iterrows():
+                # normalize fields
+                name = str(row.get('name', '')).strip()
+                comps_field = row.get('components', '') or ''
+                comps = [c.strip().lower() for c in str(comps_field).split(',') if c.strip()]
 
-        alert_df = pd.DataFrame(component_alerts)
+                # parse dates safely
+                try:
+                    sd = pd.to_datetime(row['start_date'])
+                except Exception:
+                    continue
+                pe = pd.to_datetime(row.get('planned_exit'))
 
-        urgency_colors = {
-            "EXTREM": "background-color: #ff4d4f; color: white; font-weight: bold",
-            "Dringend": "background-color: #fa8c16; color: white; font-weight: bold",
-            "OK": "background-color: #52c41a; color: white; font-weight: bold"
-        }
+                started = sd <= today
+                not_left = pd.isna(pe) or (pe > today)
 
-        styled_alert_df = alert_df.style.applymap(lambda val: urgency_colors.get(val, ""), subset=["Dringlichkeit"])
-        st.markdown("#### 🧩 Komponenten mit kritischem Risiko")
-        st.dataframe(styled_alert_df, use_container_width=True)
+                assigned = (comp_key in comps) or (name in responsible_list)
+                if assigned and started and not_left:
+                    active_count += 1
+
+            required = int(st.session_state.component_requirements.get(component, 1))
+
+            if active_count == 0:
+                status = "UNBESETZT"
+            elif active_count < required:
+                # Single resource available -> critical (red)
+                status = "UNTERBESETZT - SINGLE" if active_count == 1 else "UNTERBESETZT"
+            else:
+                status = "OK"
+
+            component_rows.append({
+                "Komponente": component,
+                "Verantwortlich": ", ".join(responsible_list),
+                "Aktive Ressourcen": active_count,
+                "Benötigt": required,
+                "Status": status
+            })
+
+        comp_df = pd.DataFrame(component_rows).sort_values(["Status", "Komponente"], ascending=[True, True])
+
+        def status_style(val):
+            if val == "UNBESETZT":
+                return "background-color: #ff4d4f; color: white; font-weight: bold"
+            if val == "UNTERBESETZT - SINGLE":
+                return "background-color: #ff4d4f; color: white; font-weight: bold"
+            if val == "UNTERBESETZT":
+                return "background-color: #fa8c16; color: white; font-weight: bold"
+            if val == "OK":
+                return "background-color: #52c41a; color: white; font-weight: bold"
+            return ""
+
+        styled_comp_df = comp_df.style.applymap(lambda v: status_style(v), subset=["Status"])
+        st.markdown("#### 🧩 Komponentenübersicht & Staffing-Status")
+        st.dataframe(styled_comp_df, use_container_width=True)
     else:
         st.info("ℹ️ Keine Komponenten zugewiesen.")
 
@@ -255,7 +305,12 @@ def main():
                 with col1:
                     st.write(f"**Components:** {member['components']}")
                     
-                    assigned_components = [comp for comp, person in st.session_state.component_map.items() if person == member['name']]
+                    # derive components where this member is one of the responsibles
+                    assigned_components = []
+                    for comp, responsibles in st.session_state.component_map.items():
+                        resp_list = responsibles if isinstance(responsibles, (list, tuple)) else [responsibles]
+                        if member['name'] in resp_list:
+                            assigned_components.append(comp)
                     if assigned_components:
                         st.write(f"**Zugewiesene Komponenten:** {', '.join(assigned_components)}")
 
@@ -299,6 +354,8 @@ def main():
                 edit_priority = st.selectbox("Prioritätsstufe",
                                            ["Low", "Medium", "High", "Critical"],
                                            index=["Low", "Medium", "High", "Critical"].index(member['priority']))
+                # Alter hinzufügen / editieren
+                edit_age = st.number_input("Alter", min_value=16, max_value=100, value=int(member.get('age', 30)))
             
             col_save, col_cancel = st.columns(2)
             with col_save:
@@ -315,6 +372,7 @@ def main():
                     "planned_exit": edit_planned_exit.strftime("%Y-%m-%d"),
                     "knowledge_transfer_status": edit_status,
                     "priority": edit_priority
+                    , "age": int(edit_age)
                 }
                 st.session_state.editing_index = None
                 st.rerun()
@@ -339,7 +397,7 @@ def main():
                                          "Critical": "#d40000",
                                          "High": "#ED8727", 
                                          "Medium": "#4dd0e1",
-                                         "Low": "#52C41A"
+                                         "Low": "#4FCA11"
                                      })
             fig_timeline.update_layout(
                 height=450,
@@ -370,6 +428,25 @@ def main():
                 font=dict(color="#333")
             )
             st.plotly_chart(fig_donut, use_container_width=True)
+            
+            # Altersverteilung nach Gruppen
+            if 'age' in df.columns and not df['age'].dropna().empty:
+                ages = df['age'].dropna().astype(int)
+                # Age groups up to 65 — remove the separate '65+' label
+                bins = [0, 24, 34, 44, 54, 64]
+                labels = ["<25", "25-34", "35-44", "45-54", "55-64"]
+                age_groups = pd.cut(ages, bins=bins, labels=labels, right=True, include_lowest=True)
+                age_counts = age_groups.value_counts().reindex(labels).fillna(0).astype(int)
+                fig_age = px.bar(
+                    x=age_counts.index,
+                    y=age_counts.values,
+                    labels={'x': 'Altersgruppe', 'y': 'Anzahl'},
+                    title="Altersverteilung (Gruppen)"
+                )
+                fig_age.update_layout(height=300, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_age, use_container_width=True)
+            else:
+                st.info("ℹ️ Keine Altersdaten vorhanden.")
     
     # Prognose: Forecast for next 12 months
     forecast_months = pd.date_range(pd.Timestamp.today().normalize(), periods=12, freq='MS')
@@ -402,17 +479,20 @@ def main():
     if not critical_df.empty:
         st.dataframe(critical_df, use_container_width=True)
     else:
-        st.success("✅ Keine kritischen Austritte in den nächsten 6 Monaten.")
+        st.success("✅ Keine kritischen Austritte in den nächsten 6 Monaten.") # Langere Augenblick , weil Rekrutierunngsphase (ca.3 Monate) laenger braucht.
 
     # DISPLAY COMPONENT RESPONSIBILITIES TABLE
     if 'component_map' in st.session_state and st.session_state.component_map:
         st.markdown("---")
-        st.markdown("#### 🧪 Komponentenübersicht")
-        component_df = pd.DataFrame(
-            list(st.session_state.component_map.items()),
-            columns=["Komponente", "Verantwortlich"]
-        )
-        st.dataframe(component_df, use_container_width=True)
+        st.markdown("#### 🧪 Komponentenübersicht (Kurz)")
+        # create a compact view: Komponente, Verantwortlich, Benötigt
+        comp_list = []
+        for comp, resp in st.session_state.component_map.items():
+            needed = int(st.session_state.component_requirements.get(comp, 1))
+            resp_list = resp if isinstance(resp, (list, tuple)) else [resp]
+            comp_list.append({"Komponente": comp, "Verantwortlich": ", ".join(resp_list), "Benötigt": needed})
+        short_comp_df = pd.DataFrame(comp_list)
+        st.dataframe(short_comp_df, use_container_width=True)
     else:
         st.info("ℹ️ Noch keine Komponenten hinzugefügt.")
 
@@ -441,7 +521,7 @@ def main():
                                   max_value=int(df['days_until_exit'].max()) + 100 if not df.empty else 1000,
                                   value=(0, 1000))
         
-        # Apply filters
+        # filters
         filtered_df = df[
             (df['knowledge_transfer_status'].isin(status_filter)) &
             (df['priority'].isin(priority_filter)) &
@@ -450,7 +530,7 @@ def main():
             (df['days_until_exit'] <= days_filter[1])
         ]
         
-        # Display filtered table with better formatting
+        # Display filtered table
         display_df = filtered_df[['name', 'role', 'components', 'priority', 'days_until_exit', 'knowledge_transfer_status']].copy()
         display_df.columns = ['Name', 'Rolle', 'Components', 'Priorität', 'Tage bis Austritt', 'WU-Status']
         
@@ -474,6 +554,7 @@ def main():
         name = st.text_input("Vollständiger Name")
         role = st.text_input("Rolle/Position")
         components = st.text_area("Wichtige Komponenten/Verantwortlichkeiten")
+        age = st.number_input("Alter", min_value=16, max_value=100, value=30)
         
         col1, col2 = st.columns(2)
         with col1:
@@ -498,6 +579,7 @@ def main():
                     "planned_exit": planned_exit.strftime("%Y-%m-%d"),
                     "knowledge_transfer_status": status,
                     "priority": priority
+                    , "age": int(age)
                 }
                 st.session_state.team_data.append(new_member)
                 st.rerun()
@@ -510,20 +592,22 @@ def main():
     st.sidebar.markdown('#### 🧪 Neue Komponente hinzufügen')
     with st.sidebar.form("add_component_form", clear_on_submit=True):
         component_name = st.text_input("Komponentenname")
-        responsible_person = st.selectbox("Verantwortliche Person", options=[member['name']
-    for member in st.session_state.team_data])
+        responsible_persons = st.multiselect("Verantwortliche Person(en)", options=[member['name'] for member in st.session_state.team_data])
+        required_count = st.number_input("Benötigte Anzahl Personen (permanent)", min_value=1, max_value=10, value=1)
         component_submitted = st.form_submit_button("💾 Komponente speichern", use_container_width=True)
 
         if component_submitted:
-            if component_name and responsible_person:
-                st.session_state.component_map[component_name] = responsible_person
-                st.sidebar.success(f"✅ '{component_name}' wurde {responsible_person} zugewiesen.")
+            if component_name and responsible_persons:
+                # store as list
+                st.session_state.component_map[component_name] = responsible_persons
+                st.session_state.component_requirements[component_name] = int(required_count)
+                st.sidebar.success(f"✅ '{component_name}' wurde {', '.join(responsible_persons)} zugewiesen.")
             else:
                 st.sidebar.error("Bitte geben Sie einen Namen und wählen Sie eine verantwortliche Person aus.")
 
     # SIDEBAR ACTIONS
     st.sidebar.markdown("---")
-    st.sidebar.markdown('<h3 style="color: #009999;">🛠️ Aktionen</h3>', unsafe_allow_html=True)
+    st.sidebar.markdown('<h3 style="color: #009999;">🛠️ Aktionen</h3>', unsafe_allow_html=True) 
     
     if st.sidebar.button("📊 Exportieren nach Excel", use_container_width=True):
         # Create downloadable Excel file
