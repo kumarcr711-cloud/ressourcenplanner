@@ -104,14 +104,48 @@ def main():
     
     # Convert to DataFrame
     df = pd.DataFrame(st.session_state.team_data)
+    
     if not df.empty:
-        df['planned_exit'] = pd.to_datetime(df['planned_exit'])
-        df['start_date'] = pd.to_datetime(df['start_date'])
+        df['planned_exit'] = pd.to_datetime(df['planned_exit'], errors='coerce')
+        df['start_date'] = pd.to_datetime(df['start_date'], errors='coerce')
+
+        # Calculate metrics
         df['days_until_exit'] = (df['planned_exit'] - pd.Timestamp.today()).dt.days
         df['tenure_days'] = (pd.Timestamp.today() - df['start_date']).dt.days
+
+        # Forecast months
+        forecast_months = pd.date_range(pd.Timestamp.today().normalize(), periods=12, freq='MS')
+        forecast_df = pd.DataFrame({'month': forecast_months})
+
+        # Active members per month
+        forecast_df['active_members'] = forecast_df['month'].apply(
+            lambda m: ((df['start_date'] <= m) & ((df['planned_exit'].isna()) | (df['planned_exit'] > m))).sum()
+        )
+
+        # Exits per month
+        forecast_df['exits'] = forecast_df['month'].apply(
+            lambda m: df[df['planned_exit'].dt.to_period('M') == m.to_period('M')].shape[0]
+        )
+
+        # Hiring recommendation logic (placeholder)
+        forecast_df['recommended_hires'] = forecast_df['exits']  # Replace with custom logic if needed
+
+        # Plot forecast
+        fig = px.line(
+            forecast_df,
+            x='month',
+            y=['active_members', 'exits', 'recommended_hires'],
+            labels={'value': 'Count', 'month': 'Month', 'variable': 'Metric'},
+            title='Team Forecast: Active Members, Exits & Hiring Recommendations'
+        )
+        st.plotly_chart(fig)
+
+        # Optional: show table
+        st.dataframe(forecast_df)
+
     else:
-        # Create empty dataframe with expected columns if no data
-        df = pd.DataFrame(columns=['name', 'role', 'components', 'start_date', 'planned_exit', 'knowledge_transfer_status', 'priority'])
+        st.warning("No team data available.")
+
     
     # KEY METRICS ROW
     st.markdown("---")
