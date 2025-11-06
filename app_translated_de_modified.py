@@ -84,20 +84,20 @@ st.markdown("""
 if 'team_data' not in st.session_state:
     st.session_state.team_data = [
         {"name": "Alice Schmidt", "role": "Developer", "components": "DOKU", 
-         "start_date": "2020-01-01", "planned_exit": "2026-12-31", "knowledge_transfer_status": "Not Started", "priority": "High", "age": 32},
+         "start_date": "2020-01-01", "planned_exit": "2026-12-31", "knowledge_transfer_status": "Not Started", "priority": "High", "age": 32, "team": "CS1"},
         {"name": "Bob Weber", "role": "Tester", "components": "Generell", 
-         "start_date": "2021-03-15", "planned_exit": "2029-06-30", "knowledge_transfer_status": "In Progress", "priority": "Critical", "age": 50},
+         "start_date": "2021-03-15", "planned_exit": "2029-06-30", "knowledge_transfer_status": "In Progress", "priority": "Critical", "age": 50, "team": "CS2"},
         {"name": "Charlie Mueller", "role": "System Architect", "components": "iBS", 
-         "start_date": "2019-06-01", "planned_exit": "2025-12-30", "knowledge_transfer_status": "Completed", "priority": "Medium", "age": 52},
+         "start_date": "2019-06-01", "planned_exit": "2025-12-30", "knowledge_transfer_status": "Completed", "priority": "Medium", "age": 52, "team": "CS3"},
         {"name": "Diana Fischer", "role": "Requirements Engineer", "components": "TMS", 
-         "start_date": "2022-01-10", "planned_exit": "2031-09-15", "knowledge_transfer_status": "Not Started", "priority": "High", "age": 57},
+         "start_date": "2022-01-10", "planned_exit": "2031-09-15", "knowledge_transfer_status": "Not Started", "priority": "High", "age": 57, "team": "CS4"},
         {"name": "Erik Wagner", "role": "Scrum Master", "components": "Kundenprojekte", 
-         "start_date": "2021-08-20", "planned_exit": "2035-11-30", "knowledge_transfer_status": "In Progress", "priority": "Medium", "age": 29},
-        {"name": "Markus Becker", "role": "DevOps Engineer", "components": "Backend, Cloud", "start_date": "2023-02-11", "planned_exit": "2028-12-15", "knowledge_transfer_status": "Not Started", "priority": "Medium", "age": 29},
-        {"name": "Sophie Krause", "role": "Business Analyst", "components": "Finanzen, Generell", "start_date": "2018-08-30", "planned_exit": "2027-03-12", "knowledge_transfer_status": "Completed", "priority": "High", "age": 41},
-        {"name": "Julia Wagner", "role": "UI/UX Designer", "components": "Frontend, TMS", "start_date": "2021-05-18", "planned_exit": "2026-08-29", "knowledge_transfer_status": "In Progress", "priority": "Critical", "age": 36},
-        {"name": "Lars Richter", "role": "Test Automation", "components": "Testing, iBS", "start_date": "2019-11-04", "planned_exit": "2025-11-04", "knowledge_transfer_status": "Not Started", "priority": "Medium", "age": 45},
-        {"name": "Heike Zimmermann", "role": "Product Owner", "components": "Kommunikation, Kundenprojekte", "start_date": "2017-03-14", "planned_exit": "2026-09-01", "knowledge_transfer_status": "Completed", "priority": "High", "age": 53} 
+         "start_date": "2021-08-20", "planned_exit": "2035-11-30", "knowledge_transfer_status": "In Progress", "priority": "Medium", "age": 29, "team": "CS5"},
+        {"name": "Markus Becker", "role": "DevOps Engineer", "components": "Backend, Cloud", "start_date": "2023-02-11", "planned_exit": "2028-12-15", "knowledge_transfer_status": "Not Started", "priority": "Medium", "age": 29, "team": "CS1"},
+        {"name": "Sophie Krause", "role": "Business Analyst", "components": "Finanzen, Generell", "start_date": "2018-08-30", "planned_exit": "2027-03-12", "knowledge_transfer_status": "Completed", "priority": "High", "age": 41, "team": "CS2"},
+        {"name": "Julia Wagner", "role": "UI/UX Designer", "components": "Frontend, TMS", "start_date": "2021-05-18", "planned_exit": "2026-08-29", "knowledge_transfer_status": "In Progress", "priority": "Critical", "age": 36, "team": "CS3"},
+        {"name": "Lars Richter", "role": "Test Automation", "components": "Testing, iBS", "start_date": "2019-11-04", "planned_exit": "2025-11-04", "knowledge_transfer_status": "Not Started", "priority": "Medium", "age": 45, "team": "CS4"},
+        {"name": "Heike Zimmermann", "role": "Product Owner", "components": "Kommunikation, Kundenprojekte", "start_date": "2017-03-14", "planned_exit": "2026-09-01", "knowledge_transfer_status": "Completed", "priority": "High", "age": 53, "team": "CS5"} 
     ]
 
 if 'editing_index' not in st.session_state:
@@ -106,7 +106,7 @@ if 'editing_index' not in st.session_state:
 def main():
     # KOPFZEILE
     st.markdown('<h1 class="main-header">🏢 ADC TMS Ressourcenplanner📈📅</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666;">Besser als Talevo auf jeden Fall</p>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666;">MVP</p>', unsafe_allow_html=True)
 
     
     # Initialize component map
@@ -120,6 +120,8 @@ def main():
     # Convert to DataFrame
     df = pd.DataFrame(st.session_state.team_data)
     if not df.empty:
+        if 'team' not in df.columns:
+            df['team'] = "Unassigned"
         df['planned_exit'] = pd.to_datetime(df['planned_exit'])
         df['start_date'] = pd.to_datetime(df['start_date'])
         df['days_until_exit'] = (df['planned_exit'] - pd.Timestamp.today()).dt.days
@@ -304,7 +306,7 @@ def main():
                 
                 with col1:
                     st.write(f"**Components:** {member['components']}")
-                    
+                    st.write(f"**Team:** {member.get('team', 'Unassigned')}")
                     # derive components where this member is one of the responsibles
                     assigned_components = []
                     for comp, responsibles in st.session_state.component_map.items():
@@ -356,6 +358,9 @@ def main():
                                            index=["Low", "Medium", "High", "Critical"].index(member['priority']))
                 # Alter hinzufügen / editieren
                 edit_age = st.number_input("Alter", min_value=16, max_value=100, value=int(member.get('age', 30)))
+                # Team auswählen
+                teams = ["CS1", "CS2", "CS3", "CS4", "CS5", "Unassigned"]
+                edit_team = st.selectbox("Team", teams, index=teams.index(member.get('team', 'Unassigned')))
             
             col_save, col_cancel = st.columns(2)
             with col_save:
@@ -371,8 +376,9 @@ def main():
                     "start_date": edit_start_date.strftime("%Y-%m-%d"),
                     "planned_exit": edit_planned_exit.strftime("%Y-%m-%d"),
                     "knowledge_transfer_status": edit_status,
-                    "priority": edit_priority
-                    , "age": int(edit_age)
+                    "priority": edit_priority,
+                    "age": int(edit_age),
+                    "team": edit_team
                 }
                 st.session_state.editing_index = None
                 st.rerun()
@@ -386,12 +392,17 @@ def main():
         st.markdown("---")
         st.markdown('<h3 class="section-header">📈 Strategische Übersicht</h3>', unsafe_allow_html=True)
         
+        # grouping control
+        group_by = st.selectbox("Group timeline by", ["Name", "Team"], index=0, help="Wähle, ob die Timeline pro Person oder pro Team gruppiert werden soll.")
+        
         col1, col2 = st.columns(2)
         
         with col1:
             # Enhanced Timeline Gantt Chart
-            fig_timeline = px.timeline(df, x_start="start_date", x_end="planned_exit", y="name",
+            y_axis = "name" if group_by == "Name" else "team"
+            fig_timeline = px.timeline(df, x_start="start_date", x_end="planned_exit", y=y_axis,
                                      color="priority", 
+                                     hover_data=["name", "role"] if y_axis == "team" else ["role"],
                                      title="Zeitplan der Teammitglieder (Farbe nach Priorität)",
                                      color_discrete_map={
                                          "Critical": "#d40000",
@@ -408,6 +419,25 @@ def main():
             fig_timeline.update_xaxes(gridcolor='#f0f0f0')
             fig_timeline.update_yaxes(gridcolor='#f0f0f0')
             st.plotly_chart(fig_timeline, use_container_width=True)
+
+            # Altersverteilung nach Gruppen (jetzt links)
+            if 'age' in df.columns and not df['age'].dropna().empty:
+                ages = df['age'].dropna().astype(int)
+                # Age groups up to 65 — remove the separate '65+' label
+                bins = [0, 24, 34, 44, 54, 64]
+                labels = ["<25", "25-34", "35-44", "45-54", "55-64"]
+                age_groups = pd.cut(ages, bins=bins, labels=labels, right=True, include_lowest=True)
+                age_counts = age_groups.value_counts().reindex(labels).fillna(0).astype(int)
+                fig_age = px.bar(
+                    x=age_counts.index,
+                    y=age_counts.values,
+                    labels={'x': 'Altersgruppe', 'y': 'Anzahl'},
+                    title="Altersverteilung (Gruppen)"
+                )
+                fig_age.update_layout(height=300, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_age, use_container_width=True)
+            else:
+                st.info("ℹ️ Keine Altersdaten vorhanden.")
         
         with col2:
             # Risk Assessment Donut Chart
@@ -429,25 +459,6 @@ def main():
             )
             st.plotly_chart(fig_donut, use_container_width=True)
             
-            # Altersverteilung nach Gruppen
-            if 'age' in df.columns and not df['age'].dropna().empty:
-                ages = df['age'].dropna().astype(int)
-                # Age groups up to 65 — remove the separate '65+' label
-                bins = [0, 24, 34, 44, 54, 64]
-                labels = ["<25", "25-34", "35-44", "45-54", "55-64"]
-                age_groups = pd.cut(ages, bins=bins, labels=labels, right=True, include_lowest=True)
-                age_counts = age_groups.value_counts().reindex(labels).fillna(0).astype(int)
-                fig_age = px.bar(
-                    x=age_counts.index,
-                    y=age_counts.values,
-                    labels={'x': 'Altersgruppe', 'y': 'Anzahl'},
-                    title="Altersverteilung (Gruppen)"
-                )
-                fig_age.update_layout(height=300, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(fig_age, use_container_width=True)
-            else:
-                st.info("ℹ️ Keine Altersdaten vorhanden.")
-    
     # Prognose: Forecast for next 12 months
     forecast_months = pd.date_range(pd.Timestamp.today().normalize(), periods=12, freq='MS')
     forecast_df = pd.DataFrame({'Monat': forecast_months})
@@ -502,7 +513,7 @@ def main():
         st.markdown('<h3 class="section-header">👥 Detaillierte Teamübersicht</h3>', unsafe_allow_html=True)
         
         # Filters
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             status_filter = st.multiselect("Wissensübergabe", 
                                          options=df['knowledge_transfer_status'].unique(),
@@ -520,6 +531,9 @@ def main():
                                   min_value=0, 
                                   max_value=int(df['days_until_exit'].max()) + 100 if not df.empty else 1000,
                                   value=(0, 1000))
+        with col5:
+            team_options = sorted(df['team'].unique())
+            team_filter = st.multiselect("Team", options=team_options, default=team_options)
         
         # filters
         filtered_df = df[
@@ -527,12 +541,13 @@ def main():
             (df['priority'].isin(priority_filter)) &
             (df['role'].isin(role_filter)) &
             (df['days_until_exit'] >= days_filter[0]) &
-            (df['days_until_exit'] <= days_filter[1])
+            (df['days_until_exit'] <= days_filter[1]) &
+            (df['team'].isin(team_filter))
         ]
         
         # Display filtered table
-        display_df = filtered_df[['name', 'role', 'components', 'priority', 'days_until_exit', 'knowledge_transfer_status']].copy()
-        display_df.columns = ['Name', 'Rolle', 'Components', 'Priorität', 'Tage bis Austritt', 'WU-Status']
+        display_df = filtered_df[['name', 'role', 'team', 'components', 'priority', 'days_until_exit', 'knowledge_transfer_status']].copy()
+        display_df.columns = ['Name', 'Rolle', 'Team', 'Components', 'Priorität', 'Tage bis Austritt', 'WU-Status']
         
         # Color code the Tage bis Austritt column
         def color_days(val):
@@ -567,6 +582,8 @@ def main():
             status = st.selectbox("Wissensübergabe", ["Not Started", "In Progress", "Completed"])
         with col4:
             priority = st.selectbox("Priorität", ["Low", "Medium", "High", "Critical"])
+        # Team Auswahl
+        team = st.selectbox("Team", ["CS1", "CS2", "CS3", "CS4", "CS5", "Unassigned"], index=5)
         
         submitted = st.form_submit_button("💾 Teammitglied hinzufügen", use_container_width=True)
         if submitted:
@@ -578,8 +595,9 @@ def main():
                     "start_date": start_date.strftime("%Y-%m-%d"),
                     "planned_exit": planned_exit.strftime("%Y-%m-%d"),
                     "knowledge_transfer_status": status,
-                    "priority": priority
-                    , "age": int(age)
+                    "priority": priority,
+                    "age": int(age),
+                    "team": team
                 }
                 st.session_state.team_data.append(new_member)
                 st.rerun()
