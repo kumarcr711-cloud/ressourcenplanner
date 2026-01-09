@@ -7,78 +7,238 @@ import numpy as np
 
 # SEITENKONFIGURATION - MUSS DER ERSTE STREAMLIT-BEFEHL SEIN
 st.set_page_config(
-    page_title="ADC Ressourcendashboard",
+    page_title="ADC TMS Ressourcendashboard",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Initialize dark mode setting
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = False
+
+# Color palette function based on theme
+def get_colors():
+    """Returns color palette based on dark mode setting"""
+    if st.session_state.dark_mode:
+        return {
+            'primary': '#00d4ff',
+            'primary_dark': '#00a8cc',
+            'background': '#1e1e1e',
+            'surface': '#2d2d2d',
+            'surface_light': '#3a3a3a',
+            'text': '#e0e0e0',
+            'text_secondary': '#a0a0a0',
+            'border': '#404040',
+            'success': '#4ade80',
+            'warning': '#fbbf24',
+            'error': '#ff6b6b',
+            'info': '#3b82f6'
+        }
+    else:
+        return {
+            'primary': '#009999',
+            'primary_dark': '#007777',
+            'background': '#ffffff',
+            'surface': '#f8f9fa',
+            'surface_light': '#e6f7ff',
+            'text': '#333333',
+            'text_secondary': '#666666',
+            'border': '#e0e0e0',
+            'success': '#52c41a',
+            'warning': '#fa8c16',
+            'error': '#ff4d4f',
+            'info': '#1890ff'
+        }
+
 # THEMA
-st.markdown("""
+def load_theme():
+    """Load CSS theme based on dark mode setting"""
+    colors = get_colors()
+    st.markdown(f"""
 <style>
-    .main-header {
+    :root {{
+        --primary: {colors['primary']};
+        --primary-dark: {colors['primary_dark']};
+        --background: {colors['background']};
+        --surface: {colors['surface']};
+        --surface-light: {colors['surface_light']};
+        --text: {colors['text']};
+        --text-secondary: {colors['text_secondary']};
+        --border: {colors['border']};
+        --success: {colors['success']};
+        --warning: {colors['warning']};
+        --error: {colors['error']};
+        --info: {colors['info']};
+    }}
+    
+    body {{
+        background-color: {colors['background']} !important;
+        color: {colors['text']} !important;
+    }}
+    
+    .main {{
+        background-color: {colors['background']} !important;
+    }}
+    
+    .main-header {{
         font-size: 3rem !important;
-        color: #009999 !important;
+        color: {colors['primary']} !important;
         text-align: center;
         margin-bottom: 2rem;
         font-weight: 700; 
-    }
-    .metric-card {
-        background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+    }}
+    
+    .metric-card {{
+        background: linear-gradient(135deg, {colors['surface_light']} 0%, {colors['surface']} 100%);
         padding: 1.5rem;
         border-radius: 12px;
-        border-left: 5px solid #009999;
+        border-left: 5px solid {colors['primary']};
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         transition: transform 0.2s ease;
-    }
-    .metric-card:hover {
+        color: {colors['text']};
+    }}
+    
+    .metric-card:hover {{
         transform: translateY(-3px);
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-    }
-    .critical-alert {
-        background: linear-gradient(135deg, #e0f7fa 0%, #e0f2f1 100%);
+    }}
+    
+    .critical-alert {{
+        background: linear-gradient(135deg, {colors['surface']} 0%, {colors['surface_light']} 100%);
         padding: 1.2rem;
         border-radius: 10px;
-        border-left: 5px solid #00bcd4;
+        border-left: 5px solid {colors['info']};
         margin: 0.8rem 0;
-        box-shadow: 0 3px 5px rgba(0, 188, 212, 0.3);
-        color: #006064 !important;
-    }
-    .critical-alert h4, .critical-alert p, .critical-alert b {
-        color: #006064 !important;
-    }
-    .section-header {
-        color: #009999;
-        border-bottom: 2px solid #009999;
+        box-shadow: 0 3px 5px rgba(0, 0, 0, 0.15);
+        color: {colors['text']} !important;
+    }}
+    
+    .critical-alert h4, .critical-alert p, .critical-alert b {{
+        color: {colors['text']} !important;
+    }}
+    
+    .section-header {{
+        color: {colors['primary']};
+        border-bottom: 2px solid {colors['primary']};
         padding-bottom: 0.5rem;
         margin-bottom: 1rem;
-    }
-    .stButton button {
-        background: linear-gradient(135deg, #009999 0%, #007777 100%);
+    }}
+    
+    .stButton button {{
+        background: linear-gradient(135deg, {colors['primary']} 0%, {colors['primary_dark']} 100%);
         color: white;
         border: none;
         border-radius: 8px;
         padding: 0.5rem 1rem;
         font-weight: 600;
-    }
-    .stButton button:hover {
-        background: linear-gradient(135deg, #007777 0%, #005555 100%);
+    }}
+    
+    .stButton button:hover {{
+        background: linear-gradient(135deg, {colors['primary_dark']} 0%, #005555 100%);
         color: white;
-    }
-    .delete-btn {
-        background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%) !important;
-    }
-    .delete-btn:hover {
-        background: linear-gradient(135deg, #ff7875 0%, #ff4d4f 100%) !important;
-    }
-    .edit-btn {
-        background: linear-gradient(135deg, #fa8c16 0%, #ffa940 100%) !important;
-    }
-    .edit-btn:hover {
-        background: linear-gradient(135deg, #ffa940 0%, #fa8c16 100%) !important;
-    }
+    }}
+    
+    .delete-btn {{
+        background: linear-gradient(135deg, {colors['error']} 0%, #ff7875 100%) !important;
+    }}
+    
+    .delete-btn:hover {{
+        background: linear-gradient(135deg, #ff7875 0%, {colors['error']} 100%) !important;
+    }}
+    
+    .edit-btn {{
+        background: linear-gradient(135deg, {colors['warning']} 0%, #ffa940 100%) !important;
+    }}
+    
+    .edit-btn:hover {{
+        background: linear-gradient(135deg, #ffa940 0%, {colors['warning']} 100%) !important;
+    }}
+    
+    .product-section {{
+        background: linear-gradient(135deg, {colors['primary']} 0%, {colors['primary_dark']} 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        color: white;
+        margin: 1rem 0;
+    }}
+    
+    .product-card {{
+        background: {colors['surface']};
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        color: {colors['text']};
+    }}
+    
+    .product-card-header {{
+        background: linear-gradient(135deg, {colors['primary']} 0%, {colors['primary_dark']} 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: -1.5rem -1.5rem 1rem -1.5rem;
+        font-size: 1.3rem;
+        font-weight: 700;
+    }}
+    
+    .component-item {{
+        background: {colors['surface_light']};
+        padding: 1rem;
+        margin: 0.8rem 0;
+        border-left: 4px solid {colors['primary']};
+        border-radius: 5px;
+        color: {colors['text']};
+    }}
+    
+    .responsible-item {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.7rem 0;
+        background: {colors['surface_light']};
+        padding: 0.7rem;
+        margin: 0.5rem 0;
+        border-radius: 5px;
+        color: {colors['text']};
+    }}
+    
+    .responsible-name {{
+        font-weight: 600;
+        color: {colors['text']};
+    }}
+    
+    .critical-warning {{
+        background: {colors['error']}22;
+        border-left: 4px solid {colors['error']};
+        padding: 0.7rem;
+        margin: 0.5rem 0;
+        border-radius: 5px;
+        color: {colors['error']};
+        font-weight: 600;
+    }}
+    
+    .days-to-hire {{
+        background: {colors['warning']};
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }}
+    
+    .safe-status {{
+        background: {colors['success']};
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }}
 </style>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
+load_theme()
 
 # Initialisiere Session-State für Datenpersistenz
 if 'team_data' not in st.session_state:
@@ -93,20 +253,77 @@ if 'team_data' not in st.session_state:
          "start_date": "2022-01-10", "planned_exit": "2031-09-15", "knowledge_transfer_status": "Not Started", "priority": "High", "dob": "1969-11-25", "team": "CS4"},
         {"name": "Erik Wagner", "role": "Scrum Master", "components": "Kundenprojekte", 
          "start_date": "2021-08-20", "planned_exit": "2035-11-30", "knowledge_transfer_status": "In Progress", "priority": "Medium", "dob": "1997-02-14", "team": "CS5"},
-        {"name": "Markus Becker", "role": "DevOps Engineer", "components": "Backend, Cloud", "start_date": "2023-02-11", "planned_exit": "2028-12-15", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1997-07-30", "team": "CS1"},
-        {"name": "Sophie Krause", "role": "Business Analyst", "components": "Finanzen, Generell", "start_date": "2018-08-30", "planned_exit": "2027-03-12", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1985-04-05", "team": "CS2"},
-        {"name": "Julia Wagner", "role": "UI/UX Designer", "components": "Frontend, TMS", "start_date": "2021-05-18", "planned_exit": "2026-08-29", "knowledge_transfer_status": "In Progress", "priority": "Critical", "dob": "1990-09-12", "team": "CS3"},
+        {"name": "Markus Becker", "role": "Complaint Manager", "components": "Generell", "start_date": "2023-02-11", "planned_exit": "2028-12-15", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1997-07-30", "team": "CS1"},
+        {"name": "Sophie Krause", "role": "Developer", "components": "ZL", "start_date": "2018-08-30", "planned_exit": "2027-03-12", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1985-04-05", "team": "CS2"},
+        {"name": "Julia Wagner", "role": "Developer", "components": "iBS", "start_date": "2021-05-18", "planned_exit": "2026-08-29", "knowledge_transfer_status": "In Progress", "priority": "Critical", "dob": "1990-09-12", "team": "CS3"},
         {"name": "Lars Richter", "role": "Test Automation", "components": "Testing, iBS", "start_date": "2019-11-04", "planned_exit": "2025-11-04", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1981-12-18", "team": "CS4"},
-        {"name": "Heike Zimmermann", "role": "Product Owner", "components": "Kommunikation, Kundenprojekte", "start_date": "2017-03-14", "planned_exit": "2026-09-01", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1973-06-22", "team": "CS5"} 
+        {"name": "Heike Zimmermann", "role": "Validierer", "components": "Kundenprojekte", "start_date": "2017-03-14", "planned_exit": "2026-09-01", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1973-06-22", "team": "CS5"} 
     ]
 
 if 'editing_index' not in st.session_state:
     st.session_state.editing_index = None
 
+def calculate_priority_from_tenure(start_date_str):
+    """
+    Calculate priority based on tenure:
+    - Less than 6 months: High
+    - 6 months to 2 years: Medium
+    - Over 2 years: Low
+    """
+    start_date = pd.to_datetime(start_date_str)
+    tenure_days = (pd.Timestamp.today() - start_date).days
+    
+    if tenure_days < 180:  # Less than 6 months
+        return "High"
+    elif tenure_days < 730:  # Less than 2 years
+        return "Medium"
+    else:  # 2+ years
+        return "Low"
+
+def calculate_kt_status_from_tenure(start_date_str):
+    """
+    Calculate knowledge transfer status based on tenure:
+    - Less than 6 months: Not Started
+    - 6 months to 2 years: In Progress
+    - Over 2 years: Completed
+    """
+    start_date = pd.to_datetime(start_date_str)
+    tenure_days = (pd.Timestamp.today() - start_date).days
+    
+    if tenure_days < 180:  # Less than 6 months
+        return "Not Started"
+    elif tenure_days < 730:  # Less than 2 years
+        return "In Progress"
+    else:  # 2+ years
+        return "Completed"
+
+def update_priorities_from_tenure():
+    """Update all team members' priorities and knowledge transfer status based on their tenure."""
+    for member in st.session_state.team_data:
+        member['priority'] = calculate_priority_from_tenure(member['start_date'])
+        member['knowledge_transfer_status'] = calculate_kt_status_from_tenure(member['start_date'])
+
 def main():
+    # Update priorities based on tenure at the start of each run
+    update_priorities_from_tenure()
+    
+    # DARK MODE TOGGLE IN SIDEBAR
+    st.sidebar.markdown("---")
+    cols = st.sidebar.columns([3, 1])
+    with cols[0]:
+        st.sidebar.markdown("#### 🎨 Theme")
+    with cols[1]:
+        if st.sidebar.button("🌙" if not st.session_state.dark_mode else "☀️", key="theme_toggle", use_container_width=True):
+            st.session_state.dark_mode = not st.session_state.dark_mode
+            load_theme()
+            st.rerun()
+    
+    st.sidebar.markdown("---")
+    
     # KOPFZEILE
-    st.markdown('<h1 class="main-header">🏢 ADC Ressourcendashboard📈📅</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666;">MVP</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🏢 ADC TMS Ressourcendashboard📈📅</h1>', unsafe_allow_html=True)
+    colors = get_colors()
+    st.markdown(f'<p style="text-align: center; font-size: 1.2rem; color: {colors["text_secondary"]};">MVP</p>', unsafe_allow_html=True)
 
     
     # Initialize component map
@@ -137,6 +354,7 @@ def main():
         df = pd.DataFrame(columns=['name', 'role', 'components', 'start_date', 'planned_exit', 'knowledge_transfer_status', 'priority'])
     
     # KEY METRICS ROW
+    colors = get_colors()
     st.markdown("---")
     st.markdown('<h3 class="section-header">📊 Leistungskennzahlen</h3>', unsafe_allow_html=True)
     
@@ -146,9 +364,9 @@ def main():
         total_members = len(df)
         st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin:0; color: #009999;">👥</h3>
-            <h2 style="margin:0; color: #009999;">{total_members}</h2>
-            <p style="margin:0; color: #666;">Gesamtanzahl Teammitglieder</p>
+            <h3 style="margin:0; color: {colors['primary']};">👥</h3>
+            <h2 style="margin:0; color: {colors['primary']};">{total_members}</h2>
+            <p style="margin:0; color: {colors['text_secondary']};">Gesamtanzahl Teammitglieder</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -156,9 +374,9 @@ def main():
         critical_cases = len(df[df['days_until_exit'] < 180]) if not df.empty else 0
         st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin:0; color: #00bcd4;">🚨</h3>
-            <h2 style="margin:0; color: #00bcd4;">{critical_cases}</h2>
-            <p style="margin:0; color: #666;">Kritische Fälle</p>
+            <h3 style="margin:0; color: {colors['info']};">🚨</h3>
+            <h2 style="margin:0; color: {colors['info']};">{critical_cases}</h2>
+            <p style="margin:0; color: {colors['text_secondary']};">Kritische Fälle</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -166,9 +384,9 @@ def main():
         completed_kt = len(df[df['knowledge_transfer_status'] == "Completed"]) if not df.empty else 0
         st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin:0; color: #52c41a;">✅</h3>
-            <h2 style="margin:0; color: #52c41a;">{completed_kt}/{total_members}</h2>
-            <p style="margin:0; color: #666;">Wissensübergabe abgeschlossen</p>
+            <h3 style="margin:0; color: {colors['success']};">✅</h3>
+            <h2 style="margin:0; color: {colors['success']};">{completed_kt}/{total_members}</h2>
+            <p style="margin:0; color: {colors['text_secondary']};">Wissensübergabe abgeschlossen</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -176,13 +394,13 @@ def main():
         avg_tenure = int(df['tenure_days'].mean() / 365) if not df.empty and 'tenure_days' in df.columns else 0
         st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin:0; color: #fa8c16;">📅</h3>
-            <h2 style="margin:0; color: #fa8c16;">{avg_tenure} yrs</h2>
-            <p style="margin:0; color: #666;">Durchschnittliche Teamzugehörigkeit</p>
+            <h3 style="margin:0; color: {colors['warning']};">📅</h3>
+            <h2 style="margin:0; color: {colors['warning']};">{avg_tenure} yrs</h2>
+            <p style="margin:0; color: {colors['text_secondary']};">Durchschnittliche Teamzugehörigkeit</p>
         </div>
         """, unsafe_allow_html=True)
     
-    # CRITICAL ALERTS SECTION
+    # CRITICAL ALERTS SECTION  
     st.markdown("---")
     st.markdown('<h3 class="section-header">🔷 Kritische Ressourcenwarnungen</h3>', unsafe_allow_html=True)
     
@@ -356,12 +574,15 @@ def main():
             with col2:
                 edit_start_date = st.date_input("Startdatum", value=datetime.strptime(member['start_date'], "%Y-%m-%d"))
                 edit_planned_exit = st.date_input("Geplantes Austrittsdatum", value=datetime.strptime(member['planned_exit'], "%Y-%m-%d"))
-                edit_status = st.selectbox("Status der Wissensübergabe", 
-                                         ["Not Started", "In Progress", "Completed"],
-                                         index=["Not Started", "In Progress", "Completed"].index(member['knowledge_transfer_status']))
-                edit_priority = st.selectbox("Prioritätsstufe",
-                                           ["Low", "Medium", "High", "Critical"],
-                                           index=["Low", "Medium", "High", "Critical"].index(member['priority']))
+                # Display calculated knowledge transfer status based on tenure
+                calculated_kt_status = calculate_kt_status_from_tenure(member['start_date'])
+                st.markdown("**Status der Wissensübergabe** *(automatisch basierend auf Betriebszugehörigkeit)*")
+                colors = get_colors()
+                st.markdown(f"<div style='padding: 0.5rem; background: {colors['surface_light']}; border-radius: 5px; text-align: center; font-weight: bold; color: {colors['text']};'>{calculated_kt_status}</div>", unsafe_allow_html=True)
+                # Display calculated priority based on tenure
+                calculated_priority = calculate_priority_from_tenure(member['start_date'])
+                st.markdown("**Prioritätsstufe** *(automatisch basierend auf Betriebszugehörigkeit)*")
+                st.markdown(f"<div style='padding: 0.5rem; background: {colors['surface_light']}; border-radius: 5px; text-align: center; font-weight: bold; color: {colors['text']};'>{calculated_priority}</div>", unsafe_allow_html=True)
                 # Geburtsdatum hinzufügen / editieren
                 edit_dob = st.date_input("Geburtsdatum", value=datetime.strptime(member.get('dob', '1990-01-01'), "%Y-%m-%d"))
                 # Team auswählen
@@ -375,14 +596,17 @@ def main():
                 cancel_clicked = st.form_submit_button("❌ Abbrechen", use_container_width=True)
             
             if save_clicked:
+                # Calculate priority and knowledge transfer status automatically based on start date
+                calculated_priority = calculate_priority_from_tenure(edit_start_date.strftime("%Y-%m-%d"))
+                calculated_kt_status = calculate_kt_status_from_tenure(edit_start_date.strftime("%Y-%m-%d"))
                 st.session_state.team_data[edit_index] = {
                     "name": edit_name,
                     "role": edit_role,
                     "components": edit_components,
                     "start_date": edit_start_date.strftime("%Y-%m-%d"),
                     "planned_exit": edit_planned_exit.strftime("%Y-%m-%d"),
-                    "knowledge_transfer_status": edit_status,
-                    "priority": edit_priority,
+                    "knowledge_transfer_status": calculated_kt_status,
+                    "priority": calculated_priority,
                     "dob": edit_dob.strftime("%Y-%m-%d"),
                     "team": edit_team
                 }
@@ -406,6 +630,7 @@ def main():
         with col1:
             # Enhanced Timeline Gantt Chart
             y_axis = "name" if group_by == "Name" else "team"
+            colors = get_colors()
             fig_timeline = px.timeline(df, x_start="start_date", x_end="planned_exit", y=y_axis,
                                      color="priority", 
                                      hover_data=["name", "role"] if y_axis == "team" else ["role"],
@@ -420,10 +645,10 @@ def main():
                 height=450,
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color="#333")
+                font=dict(color=colors['text'])
             )
-            fig_timeline.update_xaxes(gridcolor='#f0f0f0')
-            fig_timeline.update_yaxes(gridcolor='#f0f0f0')
+            fig_timeline.update_xaxes(gridcolor=colors['border'])
+            fig_timeline.update_yaxes(gridcolor=colors['border'])
             st.plotly_chart(fig_timeline, use_container_width=True)
 
             # Altersverteilung nach Gruppen (jetzt links)
@@ -457,11 +682,12 @@ def main():
                                   "In Progress": "#4dd0e1", 
                                   "Completed": "#52C41A"
                               })
+            colors = get_colors()
             fig_donut.update_layout(
                 height=450,
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(color="#333")
+                font=dict(color=colors['text'])
             )
             st.plotly_chart(fig_donut, use_container_width=True)
             
@@ -620,6 +846,189 @@ def main():
     else:
         st.info("ℹ️ Noch keine Komponenten hinzugefügt.")
 
+    # PRODUKTEN ÜBERSICHT SECTION - CATCHY AND ILLUSTRATED
+    st.markdown("---")
+    st.markdown("""
+    <style>
+        .product-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            border-radius: 15px;
+            color: white;
+            margin: 1rem 0;
+        }
+        .product-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            color: #333;
+        }
+        .product-card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: -1.5rem -1.5rem 1rem -1.5rem;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+        .component-item {
+            background: #f5f5f5;
+            padding: 1rem;
+            margin: 0.8rem 0;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+        .responsible-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.7rem 0;
+            background: #fafafa;
+            padding: 0.7rem;
+            margin: 0.5rem 0;
+            border-radius: 5px;
+        }
+        .responsible-name {
+            font-weight: 600;
+            color: #333;
+        }
+        .critical-warning {
+            background: #ffebee;
+            border-left: 4px solid #ff4d4f;
+            padding: 0.7rem;
+            margin: 0.5rem 0;
+            border-radius: 5px;
+            color: #c41d7f;
+            font-weight: 600;
+        }
+        .days-to-hire {
+            background: #fff3cd;
+            color: #856404;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .safe-status {
+            background: #d4edda;
+            color: #155724;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    if 'component_map' in st.session_state and st.session_state.component_map:
+        st.markdown('<div class="product-section">', unsafe_allow_html=True)
+        st.markdown('<div class="product-title">🎯 Produkten Übersicht 🚀</div>', unsafe_allow_html=True)
+        
+        # Group components by product
+        products = {}
+        for component, responsible in st.session_state.component_map.items():
+            product = st.session_state.component_products.get(component, "Unknown")
+            if product not in products:
+                products[product] = []
+            products[product].append((component, responsible))
+        
+        # Display each product
+        for product in sorted(products.keys()):
+            st.markdown('<div class="product-card">', unsafe_allow_html=True)
+            
+            # Product header with emoji
+            product_emojis = {"CG": "🔧", "iUZ": "⚙️", "iBS": "💼"}
+            emoji = product_emojis.get(product, "📦")
+            st.markdown(f'<div class="product-card-header">{emoji} Produkt: {product}</div>', unsafe_allow_html=True)
+            
+            # Components under this product
+            st.markdown(f"**Komponenten ({len(products[product])}):**")
+            for component, responsible in products[product]:
+                responsible_list = responsible if isinstance(responsible, (list, tuple)) else [responsible]
+                st.markdown(f'<div class="component-item"><strong>📦 {component}</strong>', unsafe_allow_html=True)
+                
+                # Get responsible persons data
+                transfer_time_months = int(st.session_state.component_transfer_times.get(component, 6))
+                transfer_time_days = transfer_time_months * 30
+                today = pd.Timestamp.today().normalize()
+                
+                # Check each responsible person
+                critical_people = []
+                safe_people = []
+                
+                for person_name in responsible_list:
+                    person_data = df[df['name'] == person_name]
+                    if not person_data.empty:
+                        days_until_exit = person_data['days_until_exit'].iloc[0]
+                        kt_status = person_data['knowledge_transfer_status'].iloc[0]
+                        
+                        # Calculate days to start hiring
+                        days_to_start_hiring = days_until_exit - transfer_time_days
+                        
+                        if days_until_exit < transfer_time_days:
+                            # Critical - not enough time for knowledge transfer
+                            critical_people.append({
+                                'name': person_name,
+                                'days_until_exit': days_until_exit,
+                                'days_to_start_hiring': days_to_start_hiring,
+                                'kt_status': kt_status
+                            })
+                        else:
+                            safe_people.append({
+                                'name': person_name,
+                                'days_until_exit': days_until_exit,
+                                'days_to_start_hiring': days_to_start_hiring,
+                                'kt_status': kt_status
+                            })
+                
+                # Display safe people first
+                if safe_people:
+                    st.markdown("**✅ Verantwortliche Mitarbeiter (ausreichend Zeit):**")
+                    for person in safe_people:
+                        st.markdown(f"""
+                        <div class="responsible-item">
+                            <span class="responsible-name">👤 {person['name']}</span>
+                            <span class="safe-status">Sicher • Austritt: {person['days_until_exit']} Tage</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Display critical people in red
+                if critical_people:
+                    st.markdown("**🔴 KRITISCH**")
+                    for person in critical_people:
+                        days_msg = f"START HIRING IN {abs(person['days_to_start_hiring'])} DAYS!" if person['days_to_start_hiring'] >= 0 else f"HIRE NOW - {abs(person['days_to_start_hiring'])} DAYS OVERDUE!"
+                        st.markdown(f"""
+                        <div class="critical-warning">
+                            👤 {person['name']}<br>
+                            ⏰ Austritt in {person['days_until_exit']} Tagen<br>
+                            📋 Wissensübergabe benötigt: {transfer_time_months} Monate<br>
+                            🚨 {days_msg}
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="product-section">
+            <div class="product-title">🎯 Produkten Übersicht</div>
+            <p style="text-align: center; color: white; font-size: 1.1rem;">ℹ️ Noch keine Komponenten hinzugefügt. Fügen Sie Komponenten in der Sidebar hinzu, um die Produktübersicht zu sehen.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     # DATA TABLE WITH FILTERS
     if not df.empty:
         st.markdown("---")
@@ -676,7 +1085,8 @@ def main():
         st.dataframe(styled_df, use_container_width=True)
     
     # ADD NEW MEMBER FORM IN SIDEBAR
-    st.sidebar.markdown('<h3 style="color: #009999;">➕ Teammitglied hinzufügen</h3>', unsafe_allow_html=True)
+    colors = get_colors()
+    st.sidebar.markdown(f'<h3 style="color: {colors["primary"]};">➕ Teammitglied hinzufügen</h3>', unsafe_allow_html=True)
     
     with st.sidebar.form("add_member", clear_on_submit=True):
         name = st.text_input("Vollständiger Name")
@@ -692,23 +1102,30 @@ def main():
         
         col3, col4 = st.columns(2)
         with col3:
-            status = st.selectbox("Wissensübergabe", ["Not Started", "In Progress", "Completed"])
+            st.markdown("**Wissensübergabe** *(automatisch basierend auf Betriebszugehörigkeit)*")
+            calculated_kt_status = calculate_kt_status_from_tenure(start_date.strftime("%Y-%m-%d"))
+            colors = get_colors()
+            st.markdown(f"<div style='padding: 0.5rem; background: {colors['surface_light']}; border-radius: 5px; text-align: center; font-weight: bold; color: {colors['text']};'>{calculated_kt_status}</div>", unsafe_allow_html=True)
         with col4:
-            priority = st.selectbox("Priorität", ["Low", "Medium", "High", "Critical"])
+            st.markdown("**Priorität** *(automatisch basierend auf Betriebszugehörigkeit)*")
+            st.markdown(f"<div style='padding: 0.5rem; background: {colors['surface_light']}; border-radius: 5px; text-align: center; font-weight: bold; color: {colors['text']};'>{calculate_priority_from_tenure(start_date.strftime('%Y-%m-%d'))}</div>", unsafe_allow_html=True)
         # Team Auswahl
         team = st.selectbox("Team", ["CS1", "CS2", "CS3", "CS4", "CS5", "Unassigned"], index=5)
         
         submitted = st.form_submit_button("💾 Teammitglied hinzufügen", use_container_width=True)
         if submitted:
             if name and role:
+                # Calculate priority and knowledge transfer status automatically based on start date
+                calculated_priority = calculate_priority_from_tenure(start_date.strftime("%Y-%m-%d"))
+                calculated_kt_status = calculate_kt_status_from_tenure(start_date.strftime("%Y-%m-%d"))
                 new_member = {
                     "name": name,
                     "role": role,
                     "components": components,
                     "start_date": start_date.strftime("%Y-%m-%d"),
                     "planned_exit": planned_exit.strftime("%Y-%m-%d"),
-                    "knowledge_transfer_status": status,
-                    "priority": priority,
+                    "knowledge_transfer_status": calculated_kt_status,
+                    "priority": calculated_priority,
                     "dob": dob.strftime("%Y-%m-%d"),
                     "team": team
                 }
@@ -719,10 +1136,16 @@ def main():
     # COMPONENT ASSIGNMENT FORM IN SIDEBAR
     if 'component_map' not in st.session_state:
         st.session_state.component_map = {}
+    
+    # Initialize product assignments for components
+    if 'component_products' not in st.session_state:
+        st.session_state.component_products = {}
 
-    st.sidebar.markdown('#### 🧪 Neue Komponente hinzufügen')
+    colors = get_colors()
+    st.sidebar.markdown(f'#### 🧪 Neue Komponente hinzufügen')
     with st.sidebar.form("add_component_form", clear_on_submit=True):
         component_name = st.text_input("Komponentenname")
+        product_name = st.selectbox("Produkt", options=["CG", "iUZ", "iBS"])
         responsible_persons = st.multiselect("Verantwortliche Person(en)", options=[member['name'] for member in st.session_state.team_data])
         required_count = st.number_input("Benötigte Anzahl Personen (permanent)", min_value=1, max_value=10, value=1)
         transfer_time = st.number_input("Wissensübergabe Zeit (Monate)", min_value=1, max_value=24, value=6)
@@ -730,17 +1153,18 @@ def main():
 
         if component_submitted:
             if component_name and responsible_persons:
-                # store as list
                 st.session_state.component_map[component_name] = responsible_persons
+                st.session_state.component_products[component_name] = product_name
                 st.session_state.component_requirements[component_name] = int(required_count)
                 st.session_state.component_transfer_times[component_name] = int(transfer_time)
-                st.sidebar.success(f"✅ '{component_name}' wurde {', '.join(responsible_persons)} zugewiesen.")
+                st.sidebar.success(f"✅ '{component_name}' ({product_name}) wurde {', '.join(responsible_persons)} zugewiesen.")
             else:
                 st.sidebar.error("Bitte geben Sie einen Namen und wählen Sie eine verantwortliche Person aus.")
 
     # SIDEBAR ACTIONS
     st.sidebar.markdown("---")
-    st.sidebar.markdown('<h3 style="color: #009999;">🛠️ Aktionen</h3>', unsafe_allow_html=True) 
+    colors = get_colors()
+    st.sidebar.markdown(f'<h3 style="color: {colors["primary"]};">🛠️ Aktionen</h3>', unsafe_allow_html=True) 
     
     if st.sidebar.button("📊 Exportieren nach Excel", use_container_width=True):
         # Create downloadable Excel file
@@ -757,7 +1181,8 @@ def main():
     
     # SIDEBAR STATS
     st.sidebar.markdown("---")
-    st.sidebar.markdown('<h3 style="color: #009999;">📈 Schnellstatistiken</h3>', unsafe_allow_html=True)
+    colors = get_colors()
+    st.sidebar.markdown(f'<h3 style="color: {colors["primary"]};">📈 Schnellstatistiken</h3>', unsafe_allow_html=True)
     
     if not df.empty:
         st.sidebar.metric("Gesamtes Team", len(df))
