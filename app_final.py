@@ -243,21 +243,21 @@ load_theme()
 # Initialisiere Session-State für Datenpersistenz
 if 'team_data' not in st.session_state:
     st.session_state.team_data = [
-        {"name": "Alice Schmidt", "role": "Developer", "components": "DOKU", 
+        {"name": "Alice Schmidt", "role": "Developer", "employee_type": "Lead Cost Employee (LCE)", "components": "DOKU", 
          "start_date": "2020-01-01", "planned_exit": "2026-12-31", "knowledge_transfer_status": "Not Started", "priority": "High", "dob": "1994-05-15", "team": "CS1"},
-        {"name": "Bob Weber", "role": "Tester", "components": "Generell", 
+        {"name": "Bob Weber", "role": "Tester", "employee_type": "Lead Cost Employee (LCE)", "components": "Generell", 
          "start_date": "2021-03-15", "planned_exit": "2029-06-30", "knowledge_transfer_status": "In Progress", "priority": "Critical", "dob": "1976-08-20", "team": "CS2"},
-        {"name": "Charlie Mueller", "role": "System Architect", "components": "iBS", 
+        {"name": "Charlie Mueller", "role": "System Architect", "employee_type": "Lead Cost Employee (LCE)", "components": "iBS", 
          "start_date": "2019-06-01", "planned_exit": "2025-12-30", "knowledge_transfer_status": "Completed", "priority": "Medium", "dob": "1974-03-10", "team": "CS3"},
-        {"name": "Diana Fischer", "role": "Requirements Engineer", "components": "TMS", 
+        {"name": "Diana Fischer", "role": "Requirements Engineer", "employee_type": "Lead Cost Employee (LCE)", "components": "TMS", 
          "start_date": "2022-01-10", "planned_exit": "2031-09-15", "knowledge_transfer_status": "Not Started", "priority": "High", "dob": "1969-11-25", "team": "CS4"},
-        {"name": "Erik Wagner", "role": "Scrum Master", "components": "Kundenprojekte", 
+        {"name": "Erik Wagner", "role": "Scrum Master", "employee_type": "Lead Cost Employee (LCE)", "components": "Kundenprojekte", 
          "start_date": "2021-08-20", "planned_exit": "2035-11-30", "knowledge_transfer_status": "In Progress", "priority": "Medium", "dob": "1997-02-14", "team": "CS5"},
-        {"name": "Markus Becker", "role": "Complaint Manager", "components": "Generell", "start_date": "2023-02-11", "planned_exit": "2028-12-15", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1997-07-30", "team": "CS1"},
-        {"name": "Sophie Krause", "role": "Developer", "components": "ZL", "start_date": "2018-08-30", "planned_exit": "2027-03-12", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1985-04-05", "team": "CS2"},
-        {"name": "Julia Wagner", "role": "Developer", "components": "iBS", "start_date": "2021-05-18", "planned_exit": "2026-08-29", "knowledge_transfer_status": "In Progress", "priority": "Critical", "dob": "1990-09-12", "team": "CS3"},
-        {"name": "Lars Richter", "role": "Test Automation", "components": "Testing, iBS", "start_date": "2019-11-04", "planned_exit": "2025-11-04", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1981-12-18", "team": "CS4"},
-        {"name": "Heike Zimmermann", "role": "Validierer", "components": "Kundenprojekte", "start_date": "2017-03-14", "planned_exit": "2026-09-01", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1973-06-22", "team": "CS5"} 
+        {"name": "Markus Becker", "role": "Complaint Manager", "employee_type": "Lead Cost Employee (LCE)", "components": "Generell", "start_date": "2023-02-11", "planned_exit": "2028-12-15", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1997-07-30", "team": "CS1"},
+        {"name": "Sophie Krause", "role": "Developer", "employee_type": "Lead Cost Employee (LCE)", "components": "ZL", "start_date": "2018-08-30", "planned_exit": "2027-03-12", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1985-04-05", "team": "CS2"},
+        {"name": "Julia Wagner", "role": "Developer", "employee_type": "Lead Cost Employee (LCE)", "components": "iBS", "start_date": "2021-05-18", "planned_exit": "2026-08-29", "knowledge_transfer_status": "In Progress", "priority": "Critical", "dob": "1990-09-12", "team": "CS3"},
+        {"name": "Lars Richter", "role": "Test Automation", "employee_type": "Lead Cost Employee (LCE)", "components": "Testing, iBS", "start_date": "2019-11-04", "planned_exit": "2025-11-04", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1981-12-18", "team": "CS4"},
+        {"name": "Heike Zimmermann", "role": "Validierer", "employee_type": "Lead Cost Employee (LCE)", "components": "Kundenprojekte", "start_date": "2017-03-14", "planned_exit": "2026-09-01", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1973-06-22", "team": "CS5"} 
     ]
 
 if 'editing_index' not in st.session_state:
@@ -351,7 +351,7 @@ def main():
         df['tenure_days'] = (pd.Timestamp.today() - df['start_date']).dt.days
     else:
         # Create empty dataframe with expected columns if no data
-        df = pd.DataFrame(columns=['name', 'role', 'components', 'start_date', 'planned_exit', 'knowledge_transfer_status', 'priority'])
+        df = pd.DataFrame(columns=['name', 'role', 'employee_type', 'components', 'start_date', 'planned_exit', 'knowledge_transfer_status', 'priority', 'team', 'dob'])
     
     # KEY METRICS ROW
     colors = get_colors()
@@ -569,6 +569,7 @@ def main():
             with col1:
                 edit_name = st.text_input("Vollständiger Name", value=member['name'])
                 edit_role = st.text_input("Rolle/Position", value=member['role'])
+                edit_employee_type = st.selectbox("Mitarbeitertyp", ["Intern", "Lead Cost Employee (LCE)", "Extern"], index=["Intern", "Lead Cost Employee (LCE)", "Extern"].index(member.get('employee_type', 'Intern')))
                 edit_components = st.text_area("Wichtige Komponenten/Verantwortlichkeiten", value=member['components'])
             
             with col2:
@@ -602,6 +603,7 @@ def main():
                 st.session_state.team_data[edit_index] = {
                     "name": edit_name,
                     "role": edit_role,
+                    "employee_type": edit_employee_type,
                     "components": edit_components,
                     "start_date": edit_start_date.strftime("%Y-%m-%d"),
                     "planned_exit": edit_planned_exit.strftime("%Y-%m-%d"),
@@ -1068,8 +1070,8 @@ def main():
         ]
         
         # Display filtered table
-        display_df = filtered_df[['name', 'role', 'team', 'components', 'priority', 'days_until_exit', 'knowledge_transfer_status']].copy()
-        display_df.columns = ['Name', 'Rolle', 'Team', 'Components', 'Priorität', 'Tage bis Austritt', 'WU-Status']
+        display_df = filtered_df[['name', 'role', 'employee_type', 'team', 'components', 'priority', 'days_until_exit', 'knowledge_transfer_status']].copy()
+        display_df.columns = ['Name', 'Rolle', 'Mitarbeitertyp', 'Team', 'Components', 'Priorität', 'Tage bis Austritt', 'WU-Status']
         
         # Color code the Tage bis Austritt column
         def color_days(val):
@@ -1091,6 +1093,7 @@ def main():
     with st.sidebar.form("add_member", clear_on_submit=True):
         name = st.text_input("Vollständiger Name")
         role = st.text_input("Rolle/Position")
+        employee_type = st.selectbox("Mitarbeitertyp", ["Intern", "Lead Cost Employee (LCE)", "Extern"])
         components = st.text_area("Wichtige Komponenten/Verantwortlichkeiten")
         dob = st.date_input("Geburtsdatum", value=datetime(1990, 1, 1))
         
@@ -1121,6 +1124,7 @@ def main():
                 new_member = {
                     "name": name,
                     "role": role,
+                    "employee_type": employee_type,
                     "components": components,
                     "start_date": start_date.strftime("%Y-%m-%d"),
                     "planned_exit": planned_exit.strftime("%Y-%m-%d"),
