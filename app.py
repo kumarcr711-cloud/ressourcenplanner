@@ -243,25 +243,36 @@ load_theme()
 # Initialisiere Session-State für Datenpersistenz
 if 'team_data' not in st.session_state:
     st.session_state.team_data = [
-        {"name": "Alice Schmidt", "role": "Developer", "employee_type": "Lead Cost Employee (LCE)", "components": "DOKU", 
+        {"name": "Alice Schmidt", "role": "Developer", "employee_type": "Intern", "components": "DOKU", 
          "start_date": "2020-01-01", "planned_exit": "2026-12-31", "knowledge_transfer_status": "Not Started", "priority": "High", "dob": "1994-05-15", "team": "CS1"},
-        {"name": "Bob Weber", "role": "Tester", "employee_type": "Lead Cost Employee (LCE)", "components": "Generell", 
+        {"name": "Bob Weber", "role": "Tester", "employee_type": "Intern", "components": "Generell", 
          "start_date": "2021-03-15", "planned_exit": "2029-06-30", "knowledge_transfer_status": "In Progress", "priority": "Critical", "dob": "1976-08-20", "team": "CS2"},
-        {"name": "Charlie Mueller", "role": "System Architect", "employee_type": "Lead Cost Employee (LCE)", "components": "iBS", 
+        {"name": "Charlie Mueller", "role": "System Architect", "employee_type": "Intern", "components": "iBS", 
          "start_date": "2019-06-01", "planned_exit": "2025-12-30", "knowledge_transfer_status": "Completed", "priority": "Medium", "dob": "1974-03-10", "team": "CS3"},
-        {"name": "Diana Fischer", "role": "Requirements Engineer", "employee_type": "Lead Cost Employee (LCE)", "components": "TMS", 
+        {"name": "Diana Fischer", "role": "Requirements Engineer", "employee_type": "Intern", "components": "TMS", 
          "start_date": "2022-01-10", "planned_exit": "2031-09-15", "knowledge_transfer_status": "Not Started", "priority": "High", "dob": "1969-11-25", "team": "CS4"},
-        {"name": "Erik Wagner", "role": "Scrum Master", "employee_type": "Lead Cost Employee (LCE)", "components": "Kundenprojekte", 
+        {"name": "Erik Wagner", "role": "Scrum Master", "employee_type": "Intern", "components": "Kundenprojekte", 
          "start_date": "2021-08-20", "planned_exit": "2035-11-30", "knowledge_transfer_status": "In Progress", "priority": "Medium", "dob": "1997-02-14", "team": "CS5"},
         {"name": "Markus Becker", "role": "Complaint Manager", "employee_type": "Lead Cost Employee (LCE)", "components": "Generell", "start_date": "2023-02-11", "planned_exit": "2028-12-15", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1997-07-30", "team": "CS1"},
         {"name": "Sophie Krause", "role": "Developer", "employee_type": "Lead Cost Employee (LCE)", "components": "ZL", "start_date": "2018-08-30", "planned_exit": "2027-03-12", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1985-04-05", "team": "CS2"},
         {"name": "Julia Wagner", "role": "Developer", "employee_type": "Lead Cost Employee (LCE)", "components": "iBS", "start_date": "2021-05-18", "planned_exit": "2026-08-29", "knowledge_transfer_status": "In Progress", "priority": "Critical", "dob": "1990-09-12", "team": "CS3"},
-        {"name": "Lars Richter", "role": "Test Automation", "employee_type": "Lead Cost Employee (LCE)", "components": "Testing, iBS", "start_date": "2019-11-04", "planned_exit": "2025-11-04", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1981-12-18", "team": "CS4"},
-        {"name": "Heike Zimmermann", "role": "Validierer", "employee_type": "Lead Cost Employee (LCE)", "components": "Kundenprojekte", "start_date": "2017-03-14", "planned_exit": "2026-09-01", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1973-06-22", "team": "CS5"} 
+        {"name": "Lars Richter", "role": "Test Automation", "employee_type": "Extern", "components": "Testing, iBS", "start_date": "2019-11-04", "planned_exit": "2025-11-04", "knowledge_transfer_status": "Not Started", "priority": "Medium", "dob": "1981-12-18", "team": "CS4"},
+        {"name": "Heike Zimmermann", "role": "Validierer", "employee_type": "Extern", "components": "Kundenprojekte", "start_date": "2017-03-14", "planned_exit": "2026-09-01", "knowledge_transfer_status": "Completed", "priority": "High", "dob": "1973-06-22", "team": "CS5"} 
     ]
 
 if 'editing_index' not in st.session_state:
     st.session_state.editing_index = None
+
+def get_kt_status_mapping():
+    """Returns mapping between German display names and English storage values"""
+    return {
+        "Nicht gestartet": "Not Started",
+        "In Bearbeitung": "In Progress",
+        "Abgeschlossen": "Completed",
+        "Not Started": "Nicht gestartet",
+        "In Progress": "In Bearbeitung",
+        "Completed": "Abgeschlossen"
+    }
 
 def calculate_priority_from_tenure(start_date_str):
     """
@@ -298,10 +309,18 @@ def calculate_kt_status_from_tenure(start_date_str):
         return "Completed"
 
 def update_priorities_from_tenure():
-    """Update all team members' priorities and knowledge transfer status based on their tenure."""
+    """Update all team members' priorities and knowledge transfer status based on their tenure.
+    Only update if not manually overridden."""
     for member in st.session_state.team_data:
-        member['priority'] = calculate_priority_from_tenure(member['start_date'])
-        member['knowledge_transfer_status'] = calculate_kt_status_from_tenure(member['start_date'])
+        # Check if this member has manually set values by checking if there's a manual override flag
+        # If not present, set to auto-calculated (backward compatibility)
+        if 'manual_override' not in member:
+            member['manual_override'] = False
+        
+        # Only update if not manually overridden
+        if not member.get('manual_override', False):
+            member['priority'] = calculate_priority_from_tenure(member['start_date'])
+            member['knowledge_transfer_status'] = calculate_kt_status_from_tenure(member['start_date'])
 
 def main():
     # Update priorities based on tenure at the start of each run
@@ -575,15 +594,18 @@ def main():
             with col2:
                 edit_start_date = st.date_input("Startdatum", value=datetime.strptime(member['start_date'], "%Y-%m-%d"))
                 edit_planned_exit = st.date_input("Geplantes Austrittsdatum", value=datetime.strptime(member['planned_exit'], "%Y-%m-%d"))
-                # Display calculated knowledge transfer status based on tenure
+                # Display and allow editing of knowledge transfer status
                 calculated_kt_status = calculate_kt_status_from_tenure(member['start_date'])
-                st.markdown("**Status der Wissensübergabe** *(automatisch basierend auf Betriebszugehörigkeit)*")
-                colors = get_colors()
-                st.markdown(f"<div style='padding: 0.5rem; background: {colors['surface_light']}; border-radius: 5px; text-align: center; font-weight: bold; color: {colors['text']};'>{calculated_kt_status}</div>", unsafe_allow_html=True)
-                # Display calculated priority based on tenure
+                kt_mapping = get_kt_status_mapping()
+                kt_options = ["Nicht gestartet", "In Bearbeitung", "Abgeschlossen"]
+                current_kt_value = member.get('knowledge_transfer_status', calculated_kt_status)
+                current_kt_display = kt_mapping.get(current_kt_value, current_kt_value)
+                edit_kt_status_display = st.selectbox("Status der Wissensübergabe", kt_options, index=kt_options.index(current_kt_display) if current_kt_display in kt_options else 0)
+                edit_kt_status = kt_mapping.get(edit_kt_status_display, edit_kt_status_display)
+                # Display and allow editing of priority
                 calculated_priority = calculate_priority_from_tenure(member['start_date'])
-                st.markdown("**Prioritätsstufe** *(automatisch basierend auf Betriebszugehörigkeit)*")
-                st.markdown(f"<div style='padding: 0.5rem; background: {colors['surface_light']}; border-radius: 5px; text-align: center; font-weight: bold; color: {colors['text']};'>{calculated_priority}</div>", unsafe_allow_html=True)
+                priority_options = ["Low", "Medium", "High", "Critical"]
+                edit_priority = st.selectbox("Prioritätsstufe", priority_options, index=priority_options.index(member.get('priority', calculated_priority)) if member.get('priority', calculated_priority) in priority_options else 0)
                 # Geburtsdatum hinzufügen / editieren
                 edit_dob = st.date_input("Geburtsdatum", value=datetime.strptime(member.get('dob', '1990-01-01'), "%Y-%m-%d"))
                 # Team auswählen
@@ -597,9 +619,7 @@ def main():
                 cancel_clicked = st.form_submit_button("❌ Abbrechen", use_container_width=True)
             
             if save_clicked:
-                # Calculate priority and knowledge transfer status automatically based on start date
-                calculated_priority = calculate_priority_from_tenure(edit_start_date.strftime("%Y-%m-%d"))
-                calculated_kt_status = calculate_kt_status_from_tenure(edit_start_date.strftime("%Y-%m-%d"))
+                # Use manually entered values for priority and knowledge transfer status
                 st.session_state.team_data[edit_index] = {
                     "name": edit_name,
                     "role": edit_role,
@@ -607,10 +627,11 @@ def main():
                     "components": edit_components,
                     "start_date": edit_start_date.strftime("%Y-%m-%d"),
                     "planned_exit": edit_planned_exit.strftime("%Y-%m-%d"),
-                    "knowledge_transfer_status": calculated_kt_status,
-                    "priority": calculated_priority,
+                    "knowledge_transfer_status": edit_kt_status,
+                    "priority": edit_priority,
                     "dob": edit_dob.strftime("%Y-%m-%d"),
-                    "team": edit_team
+                    "team": edit_team,
+                    "manual_override": True
                 }
                 st.session_state.editing_index = None
                 st.rerun()
@@ -1105,22 +1126,23 @@ def main():
         
         col3, col4 = st.columns(2)
         with col3:
-            st.markdown("**Wissensübergabe** *(automatisch basierend auf Betriebszugehörigkeit)*")
             calculated_kt_status = calculate_kt_status_from_tenure(start_date.strftime("%Y-%m-%d"))
-            colors = get_colors()
-            st.markdown(f"<div style='padding: 0.5rem; background: {colors['surface_light']}; border-radius: 5px; text-align: center; font-weight: bold; color: {colors['text']};'>{calculated_kt_status}</div>", unsafe_allow_html=True)
+            kt_mapping = get_kt_status_mapping()
+            kt_options = ["Nicht gestartet", "In Bearbeitung", "Abgeschlossen"]
+            kt_status_display = kt_mapping.get(calculated_kt_status, calculated_kt_status)
+            kt_status_display = st.selectbox("Status der Wissensübergabe", kt_options, index=kt_options.index(kt_status_display) if kt_status_display in kt_options else 0, key="add_kt_status")
+            kt_status = kt_mapping.get(kt_status_display, kt_status_display)
         with col4:
-            st.markdown("**Priorität** *(automatisch basierend auf Betriebszugehörigkeit)*")
-            st.markdown(f"<div style='padding: 0.5rem; background: {colors['surface_light']}; border-radius: 5px; text-align: center; font-weight: bold; color: {colors['text']};'>{calculate_priority_from_tenure(start_date.strftime('%Y-%m-%d'))}</div>", unsafe_allow_html=True)
+            calculated_priority = calculate_priority_from_tenure(start_date.strftime("%Y-%m-%d"))
+            priority_options = ["Low", "Medium", "High", "Critical"]
+            priority = st.selectbox("Prioritätsstufe", priority_options, index=priority_options.index(calculated_priority) if calculated_priority in priority_options else 0, key="add_priority")
         # Team Auswahl
         team = st.selectbox("Team", ["CS1", "CS2", "CS3", "CS4", "CS5", "Unassigned"], index=5)
         
         submitted = st.form_submit_button("💾 Teammitglied hinzufügen", use_container_width=True)
         if submitted:
             if name and role:
-                # Calculate priority and knowledge transfer status automatically based on start date
-                calculated_priority = calculate_priority_from_tenure(start_date.strftime("%Y-%m-%d"))
-                calculated_kt_status = calculate_kt_status_from_tenure(start_date.strftime("%Y-%m-%d"))
+                # Use manually entered values for priority and knowledge transfer status
                 new_member = {
                     "name": name,
                     "role": role,
@@ -1128,10 +1150,11 @@ def main():
                     "components": components,
                     "start_date": start_date.strftime("%Y-%m-%d"),
                     "planned_exit": planned_exit.strftime("%Y-%m-%d"),
-                    "knowledge_transfer_status": calculated_kt_status,
-                    "priority": calculated_priority,
+                    "knowledge_transfer_status": kt_status,
+                    "priority": priority,
                     "dob": dob.strftime("%Y-%m-%d"),
-                    "team": team
+                    "team": team,
+                    "manual_override": True
                 }
                 st.session_state.team_data.append(new_member)
                 st.rerun()
