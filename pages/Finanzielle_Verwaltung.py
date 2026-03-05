@@ -27,6 +27,20 @@ if 'team_data' not in st.session_state:
     st.error("Teamdaten nicht gefunden. Bitte zuerst die Organisationsseite besuchen.")
     st.stop()
 
+# Helper function to calculate employee costs
+def calculate_employee_cost(emp_name, emp_type, budget_data, employee_settings):
+    """Calculate monthly and yearly costs for an employee."""
+    if emp_type == "Intern" and emp_name in employee_settings:
+        settings = employee_settings[emp_name]
+        hr = settings.get('hourly_rate', budget_data[emp_type]['hourly_rate'])
+        wh = settings.get('weekly_hours', budget_data[emp_type]['weekly_hours'])
+        monthly = (wh * hr * 52) / 12
+        yearly = wh * hr * 52
+    else:
+        monthly = budget_data.get(emp_type, {}).get('monthly_cost', 0)
+        yearly = budget_data.get(emp_type, {}).get('yearly_budget', 0)
+    return monthly, yearly
+
 st.title("💰 Finanzielle Verwaltung")
 st.markdown("Budgetverfolgung und -berechnung für die Abteilung")
 
@@ -44,20 +58,7 @@ if not df.empty:
     for idx, row in df.iterrows():
         emp_name = row['name']
         emp_type = row['employee_type']
-        
-        # Check if this is an internal employee with custom settings
-        if emp_type == "Intern" and emp_name in st.session_state.employee_settings:
-            settings = st.session_state.employee_settings[emp_name]
-            hourly_rate = settings.get('hourly_rate', st.session_state.budget_data[emp_type]['hourly_rate'])
-            weekly_hours = settings.get('weekly_hours', st.session_state.budget_data[emp_type]['weekly_hours'])
-            
-            # Calculate monthly cost: (weekly_hours * hourly_rate * 52 weeks) / 12 months
-            monthly_cost = (weekly_hours * hourly_rate * 52) / 12
-            yearly_budget = weekly_hours * hourly_rate * 52
-        else:
-            monthly_cost = st.session_state.budget_data[emp_type]["monthly_cost"]
-            yearly_budget = st.session_state.budget_data[emp_type]["yearly_budget"]
-        
+        monthly_cost, yearly_budget = calculate_employee_cost(emp_name, emp_type, st.session_state.budget_data, st.session_state.employee_settings)
         total_monthly_cost += monthly_cost
         total_yearly_budget += yearly_budget
     
@@ -86,15 +87,9 @@ for emp_type in budget_df.index:
         type_yearly_cost = 0
         for idx, row in intern_employees.iterrows():
             emp_name = row['name']
-            if emp_name in st.session_state.employee_settings:
-                settings = st.session_state.employee_settings[emp_name]
-                hr = settings.get('hourly_rate', st.session_state.budget_data[emp_type]['hourly_rate'])
-                wh = settings.get('weekly_hours', st.session_state.budget_data[emp_type]['weekly_hours'])
-                type_monthly_cost += (wh * hr * 52) / 12
-                type_yearly_cost += wh * hr * 52
-            else:
-                type_monthly_cost += st.session_state.budget_data[emp_type]["monthly_cost"]
-                type_yearly_cost += st.session_state.budget_data[emp_type]["yearly_budget"]
+            monthly, yearly = calculate_employee_cost(emp_name, emp_type, st.session_state.budget_data, st.session_state.employee_settings)
+            type_monthly_cost += monthly
+            type_yearly_cost += yearly
         actual_costs[emp_type] = {'monthly': type_monthly_cost, 'yearly': type_yearly_cost}
     else:
         count = budget_df.loc[emp_type, 'Anzahl']
@@ -118,28 +113,12 @@ st.markdown("### 👥 Mitarbeiterkosten-Übersicht")
 if not df.empty:
     # Add cost columns to the dataframe
     def get_employee_cost(row):
-        emp_name = row['name']
-        emp_type = row['employee_type']
-        
-        if emp_type == "Intern" and emp_name in st.session_state.employee_settings:
-            settings = st.session_state.employee_settings[emp_name]
-            hr = settings.get('hourly_rate', st.session_state.budget_data[emp_type]['hourly_rate'])
-            wh = settings.get('weekly_hours', st.session_state.budget_data[emp_type]['weekly_hours'])
-            return (wh * hr * 52) / 12
-        else:
-            return st.session_state.budget_data.get(emp_type, {}).get('monthly_cost', 0)
+        monthly, _ = calculate_employee_cost(row['name'], row['employee_type'], st.session_state.budget_data, st.session_state.employee_settings)
+        return monthly
     
     def get_employee_yearly(row):
-        emp_name = row['name']
-        emp_type = row['employee_type']
-        
-        if emp_type == "Intern" and emp_name in st.session_state.employee_settings:
-            settings = st.session_state.employee_settings[emp_name]
-            hr = settings.get('hourly_rate', st.session_state.budget_data[emp_type]['hourly_rate'])
-            wh = settings.get('weekly_hours', st.session_state.budget_data[emp_type]['weekly_hours'])
-            return wh * hr * 52
-        else:
-            return st.session_state.budget_data.get(emp_type, {}).get('yearly_budget', 0)
+        _, yearly = calculate_employee_cost(row['name'], row['employee_type'], st.session_state.budget_data, st.session_state.employee_settings)
+        return yearly
     
     df['Monatliche Kosten'] = df.apply(get_employee_cost, axis=1)
     df['Jährliche Kosten'] = df.apply(get_employee_yearly, axis=1)
@@ -157,30 +136,16 @@ if not df.empty:
     # Summary by employee type
     st.markdown("#### Zusammenfassung nach Mitarbeitertyp")
     
-    # Recalculate summary with actual costs
+    # Use pre-calculated costs from actual_costs
     summary_data = []
     for emp_type in st.session_state.budget_data.keys():
         type_employees = df[df['employee_type'] == emp_type]
         if not type_employees.empty:
-            monthly_sum = 0
-            yearly_sum = 0
-            for idx, row in type_employees.iterrows():
-                emp_name = row['name']
-                if emp_type == "Intern" and emp_name in st.session_state.employee_settings:
-                    settings = st.session_state.employee_settings[emp_name]
-                    hr = settings.get('hourly_rate', st.session_state.budget_data[emp_type]['hourly_rate'])
-                    wh = settings.get('weekly_hours', st.session_state.budget_data[emp_type]['weekly_hours'])
-                    monthly_sum += (wh * hr * 52) / 12
-                    yearly_sum += wh * hr * 52
-                else:
-                    monthly_sum += st.session_state.budget_data[emp_type]["monthly_cost"]
-                    yearly_sum += st.session_state.budget_data[emp_type]["yearly_budget"]
-            
             summary_data.append({
                 'Typ': emp_type,
                 'Anzahl': len(type_employees),
-                'Monatliche Kosten (€)': f"€{monthly_sum:,.2f}",
-                'Jährliche Kosten (€)': f"€{yearly_sum:,.2f}"
+                'Monatliche Kosten (€)': f"€{actual_costs[emp_type]['monthly']:,.2f}",
+                'Jährliche Kosten (€)': f"€{actual_costs[emp_type]['yearly']:,.2f}"
             })
     
     summary_df = pd.DataFrame(summary_data)
@@ -197,19 +162,10 @@ with st.sidebar.form("adjust_budget"):
     new_monthly = st.number_input("Monatliche Kosten (€)", value=st.session_state.budget_data[emp_type]["monthly_cost"], min_value=0)
     new_yearly = st.number_input("Jährliche Kosten (€)", value=st.session_state.budget_data[emp_type]["yearly_budget"], min_value=0)
     
-    # For Intern category, also show hourly rate and weekly hours
-    if emp_type == "Intern":
-        st.markdown("#### Stundenmodell für Interne (optional)")
-        new_hourly_rate = st.number_input("Stundensatz (€/h)", value=st.session_state.budget_data[emp_type].get("hourly_rate", 75), min_value=0)
-        new_weekly_hours = st.number_input("Wöchentliche Stunden", value=st.session_state.budget_data[emp_type].get("weekly_hours", 40), min_value=0)
-    
     adjust_submitted = st.form_submit_button("💾 Aktualisieren")
     if adjust_submitted:
         st.session_state.budget_data[emp_type]["monthly_cost"] = new_monthly
         st.session_state.budget_data[emp_type]["yearly_budget"] = new_yearly
-        if emp_type == "Intern":
-            st.session_state.budget_data[emp_type]["hourly_rate"] = new_hourly_rate
-            st.session_state.budget_data[emp_type]["weekly_hours"] = new_weekly_hours
         st.rerun()
 
 # Individual Employee Settings for Interns
@@ -344,15 +300,9 @@ if not df.empty:
                 intern_at_date = active_employees[active_employees['employee_type'] == 'Intern']
                 for idx, row in intern_at_date.iterrows():
                     emp_name = row['name']
-                    if emp_name in st.session_state.employee_settings:
-                        settings = st.session_state.employee_settings[emp_name]
-                        hr = settings.get('hourly_rate', st.session_state.budget_data[emp_type]['hourly_rate'])
-                        wh = settings.get('weekly_hours', st.session_state.budget_data[emp_type]['weekly_hours'])
-                        monthly_cost += (wh * hr * 52) / 12
-                        yearly_cost += wh * hr * 52
-                    else:
-                        monthly_cost += st.session_state.budget_data[emp_type]["monthly_cost"]
-                        yearly_cost += st.session_state.budget_data[emp_type]["yearly_budget"]
+                    monthly, yearly = calculate_employee_cost(emp_name, emp_type, st.session_state.budget_data, st.session_state.employee_settings)
+                    monthly_cost += monthly
+                    yearly_cost += yearly
             else:
                 count = type_counts.get(emp_type, 0)
                 monthly_cost += st.session_state.budget_data[emp_type]["monthly_cost"] * count
