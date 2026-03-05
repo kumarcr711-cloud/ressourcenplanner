@@ -169,7 +169,7 @@ def main():
         <div class="metric-card">
             <h3 style="margin:0; color: #00bcd4;">🚨</h3>
             <h2 style="margin:0; color: #00bcd4;">{critical_cases}</h2>
-            <p style="margin:0; color: #666;">Kritische Fälle</p>
+            <p style="margin:0; color: #666;">Kritische Exits</p>
         </div>
         """, unsafe_allow_html=True)
     
