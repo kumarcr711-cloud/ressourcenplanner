@@ -340,9 +340,9 @@ def main():
     st.sidebar.markdown("---")
     
     # KOPFZEILE
-    st.markdown('<h1 class="main-header">🏢 ADC TMS Ressourcendashboard📈📅</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🏢 AURA </h1>', unsafe_allow_html=True)
     colors = get_colors()
-    st.markdown(f'<p style="text-align: center; font-size: 1.2rem; color: {colors["text_secondary"]};">MVP</p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="text-align: center; font-size: 1.2rem; color: {colors["text_secondary"]};">Automated Resource Analytics</p>', unsafe_allow_html=True)
 
     
     # Initialize component map

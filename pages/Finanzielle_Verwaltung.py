@@ -13,7 +13,7 @@ st.set_page_config(
 # Initialize financial data
 if 'budget_data' not in st.session_state:
     st.session_state.budget_data = {
-        "Intern": {"monthly_cost": 1500, "yearly_budget": 18000, "hourly_rate": 75, "weekly_hours": 40},
+        "Intern": {"monthly_cost": 1500, "yearly_budget": 18000, "hourly_rate": 75, "weekly_hours": 35},
         "Lead Cost Employee (LCE)": {"monthly_cost": 5000, "yearly_budget": 60000, "hourly_rate": 0, "weekly_hours": 0},
         "Extern": {"monthly_cost": 7000, "yearly_budget": 84000, "hourly_rate": 0, "weekly_hours": 0}
     }
@@ -41,6 +41,20 @@ def calculate_employee_cost(emp_name, emp_type, budget_data, employee_settings):
         yearly = budget_data.get(emp_type, {}).get('yearly_budget', 0)
     return monthly, yearly
 
+# Helper function to calculate FTE
+def calculate_employee_fte(emp_name, emp_type, budget_data, employee_settings):
+    """Calculate FTE (Full-Time Equivalent) for an employee."""
+    if emp_type == "Intern":
+        if emp_name in employee_settings:
+            wh = employee_settings[emp_name].get('weekly_hours', budget_data[emp_type]['weekly_hours'])
+        else:
+            wh = budget_data[emp_type]['weekly_hours']
+        # Assuming 35 hours/week is full-time
+        return wh / 35 if wh > 0 else 0
+    else:
+        # Assuming other types are full-time
+        return 1.0
+
 st.title("💰 Finanzielle Verwaltung")
 st.markdown("Budgetverfolgung und -berechnung für die Abteilung")
 
@@ -54,21 +68,26 @@ if not df.empty:
     employee_counts = df['employee_type'].value_counts()
     total_monthly_cost = 0
     total_yearly_budget = 0
+    total_fte = 0
     
     for idx, row in df.iterrows():
         emp_name = row['name']
         emp_type = row['employee_type']
         monthly_cost, yearly_budget = calculate_employee_cost(emp_name, emp_type, st.session_state.budget_data, st.session_state.employee_settings)
+        fte = calculate_employee_fte(emp_name, emp_type, st.session_state.budget_data, st.session_state.employee_settings)
         total_monthly_cost += monthly_cost
         total_yearly_budget += yearly_budget
+        total_fte += fte
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Monatliche Gesamtkosten", f"€{total_monthly_cost:,.2f}")
     with col2:
         st.metric("Jährliches Budget", f"€{total_yearly_budget:,.2f}")
     with col3:
         st.metric("Anzahl Mitarbeiter", len(df))
+    with col4:
+        st.metric("Gesamt FTE", f"{total_fte:.2f}")
 
 # Budget per employee type
 st.markdown("---")
@@ -76,6 +95,18 @@ st.markdown("### 💼 Kosten pro Mitarbeitertyp")
 
 budget_df = pd.DataFrame.from_dict(st.session_state.budget_data, orient='index')
 budget_df['Anzahl'] = budget_df.index.map(employee_counts) if not df.empty else 0
+
+# Calculate total FTE per type
+fte_per_type = {}
+for emp_type in budget_df.index:
+    type_employees = df[df['employee_type'] == emp_type] if not df.empty else pd.DataFrame()
+    if not type_employees.empty:
+        total_fte = type_employees.apply(lambda row: calculate_employee_fte(row['name'], row['employee_type'], st.session_state.budget_data, st.session_state.employee_settings), axis=1).sum()
+    else:
+        total_fte = 0
+    fte_per_type[emp_type] = total_fte
+
+budget_df['Gesamt FTE'] = budget_df.index.map(fte_per_type)
 
 # Calculate actual costs considering custom employee settings
 actual_costs = {}
@@ -101,7 +132,7 @@ for emp_type in budget_df.index:
 budget_df['Gesamtkosten (Monat)'] = budget_df.index.map(lambda x: actual_costs[x]['monthly'])
 budget_df['Gesamtkosten (Jahr)'] = budget_df.index.map(lambda x: actual_costs[x]['yearly'])
 
-st.dataframe(budget_df[['Anzahl', 'monthly_cost', 'Gesamtkosten (Monat)', 'yearly_budget', 'Gesamtkosten (Jahr)']].rename(columns={
+st.dataframe(budget_df[['Anzahl', 'Gesamt FTE', 'monthly_cost', 'Gesamtkosten (Monat)', 'yearly_budget', 'Gesamtkosten (Jahr)']].rename(columns={
     'monthly_cost': 'Monatliche Kosten pro Person (€)',
     'yearly_budget': 'Jährliche Kosten pro Person (€)'
 }))
@@ -120,12 +151,16 @@ if not df.empty:
         _, yearly = calculate_employee_cost(row['name'], row['employee_type'], st.session_state.budget_data, st.session_state.employee_settings)
         return yearly
     
+    def get_employee_fte(row):
+        return calculate_employee_fte(row['name'], row['employee_type'], st.session_state.budget_data, st.session_state.employee_settings)
+    
     df['Monatliche Kosten'] = df.apply(get_employee_cost, axis=1)
     df['Jährliche Kosten'] = df.apply(get_employee_yearly, axis=1)
+    df['FTE'] = df.apply(get_employee_fte, axis=1)
     
     # Display employee list with costs
-    cost_df = df[['name', 'role', 'employee_type', 'Monatliche Kosten', 'Jährliche Kosten']].copy()
-    cost_df.columns = ['Name', 'Rolle', 'Typ', 'Monatliche Kosten (€)', 'Jährliche Kosten (€)']
+    cost_df = df[['name', 'role', 'employee_type', 'FTE', 'Monatliche Kosten', 'Jährliche Kosten']].copy()
+    cost_df.columns = ['Name', 'Rolle', 'Typ', 'FTE', 'Monatliche Kosten (€)', 'Jährliche Kosten (€)']
     
     # Format currency
     cost_df['Monatliche Kosten (€)'] = cost_df['Monatliche Kosten (€)'].apply(lambda x: f"€{x:,.2f}")
@@ -141,9 +176,11 @@ if not df.empty:
     for emp_type in st.session_state.budget_data.keys():
         type_employees = df[df['employee_type'] == emp_type]
         if not type_employees.empty:
+            total_fte = type_employees.apply(lambda row: calculate_employee_fte(row['name'], row['employee_type'], st.session_state.budget_data, st.session_state.employee_settings), axis=1).sum()
             summary_data.append({
                 'Typ': emp_type,
                 'Anzahl': len(type_employees),
+                'Gesamt FTE': f"{total_fte:.2f}",
                 'Monatliche Kosten (€)': f"€{actual_costs[emp_type]['monthly']:,.2f}",
                 'Jährliche Kosten (€)': f"€{actual_costs[emp_type]['yearly']:,.2f}"
             })
@@ -211,7 +248,8 @@ if not df.empty:
             if emp_hourly_rate > 0 and emp_weekly_hours > 0:
                 projected_monthly = (emp_weekly_hours * emp_hourly_rate * 52) / 12
                 projected_yearly = emp_weekly_hours * emp_hourly_rate * 52
-                st.info(f"📊 Monatlich: €{projected_monthly:,.2f} | Jährlich: €{projected_yearly:,.2f}")
+                fte = emp_weekly_hours / 35
+                st.info(f"📊 FTE: {fte:.2f} | Monatlich: €{projected_monthly:,.2f} | Jährlich: €{projected_yearly:,.2f}")
             
             emp_settings_submitted = st.form_submit_button("💾 Speichern")
             if emp_settings_submitted:
